@@ -13,6 +13,7 @@ authors:
 version: 0.1.0
 date-released: 2026-11-05
 repository-code: "https://github.com/wolfgang-boku/ssm-icrop"
+doi: 10.5281/zenodo.23983023
 license: MIT
 keywords:
   - crop model

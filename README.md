@@ -1,5 +1,7 @@
 # ssm-icrop
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23983023.svg)](https://doi.org/10.5281/zenodo.23983023)
+
 A Python port of **SSM-iCrop**, a simple daily crop simulation model for wheat,
 maize and grain legumes (soybean, chickpea and others), from its original
 Excel/VBA implementation.
