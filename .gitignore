@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+*.venv
+
+# Packaging
+*.whl
+*.tar.gz
+
+# Testing / tooling
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data — weather CSVs go in data/weather/ but ignore large XLS originals
+SSM-iCrop/Weather/*.xls
+SSM-iCrop/Weather/*.xlsx
+
+# LibreOffice lock files
+.~lock.*
+
+# Secrets / env
+.env
+*.env
+
+# Claude Code — personal settings and notes, never published
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Model manuals — linked from README.md, not redistributed
+SSM-iCrop/Manual/
+
+# Generated plots — regenerate with scripts/plot_scenario.py
+scripts/output/

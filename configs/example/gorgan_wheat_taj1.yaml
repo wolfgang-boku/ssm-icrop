@@ -1,0 +1,97 @@
+# "Taj1 Arab" exactly as configured in the 2022 source workbook's Run sheet:
+# scheduled irrigation (water=3) plus a full N balance (nitrogen=2).
+#
+# NOT RUNNABLE YET -- nitrogen=2 needs CropLAIN, PlantN and SoilN, which are
+# not ported. This file exists so the management block is transcribed once,
+# from the sheet, instead of being invented later. The runnable variants are
+# gorgan_wheat_potential.yaml and gorgan_wheat_waterlim.yaml.
+#
+# Source: Manag sheet rows 17-32 (MangRowNo=13), Location row 7, Soil rows 28-35.
+
+name: "Taj1 Arab"
+crop_file: "../crops/wheat.yaml"
+
+location:
+  name: "Gorgan"
+  latitude: 36.85
+  vpdf: 0.63
+  temp_change: 0.0
+  precip_change: 1.0
+  co2: 385.0
+  weather_file: "../../data/weather/gorgan.csv"
+
+management:
+  name: "Tajan 1 Arab"
+  fix_find: 0
+  plant_year: 2005
+  sim_years: 1
+  sim_doy: 340
+  pdoy: 348
+  lpdoy: 365
+  stop_doy: 400
+  sow_tmp: 5.5
+  sow_wat: 60.0
+  plant_density: 386.0
+  water: 3               # scheduled irrigation
+  nitrogen: 2            # full N balance
+  irg_level: 0.5         # IRGLVL
+
+  irrigation:
+    timing_basis: 1      # WATiT=1 -> DAP-based
+    events:
+      - {time: 117, amount_mm: 70.0}
+
+  nitrogen_schedule:
+    timing_basis: 3      # NATiT=3 -> DOY-based
+    # NOTE unresolved unit: the sheet header for this column reads "(%)" and the
+    # values are 2/10/10, but iCrop.vba:150 calls VOLFI a "Fraction
+    # volatilization". Transcribed verbatim rather than converted -- resolve
+    # against SoilN's actual usage when that module is ported.
+    events:
+      - {time: 348, amount: 2.3, volatilization_fraction: 2.0}
+      - {time: 42,  amount: 2.3, volatilization_fraction: 10.0}
+      - {time: 110, amount: 2.3, volatilization_fraction: 10.0}
+    # The workbook also fills the automatic-application block (Manag col 12),
+    # which NATiT=3 does not read. Kept here because it is the only transcription
+    # of those cells; the sheet labels watFRT where iCrop.vba:158 reads FRTWAT.
+    auto:
+      ntrsh0: 23.0
+      nvolf0: 2.0
+      bd_bfrt: 4.0
+      bd_tfrt: 28.0
+      frtwat: 30.0
+      ntrsh1: 18.0
+      napply1: 7.0
+      nvolf1: 10.0
+
+soil:
+  name: "Danesh"
+  n_layers: 5
+  ldrain: 5.0
+  salb: 0.13
+  cn: 73.0
+  layers:
+    - {depth_mm: 150.0, sat: 0.525, dul: 0.376, cll: 0.204, adry: 0.068,
+       init_water: 0.339, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.113,
+       min_fraction: 0.1, init_no3: 7.928516129032258}
+    - {depth_mm: 150.0, sat: 0.525, dul: 0.376, cll: 0.204, adry: 0.068,
+       init_water: 0.364, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.113,
+       min_fraction: 0.1, init_no3: 6.060193548387096}
+    - {depth_mm: 300.0, sat: 0.524, dul: 0.377, cll: 0.23, adry: 0.23,
+       init_water: 0.381375, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.095,
+       min_fraction: 0.1, init_no3: 9.825290322580644}
+    - {depth_mm: 300.0, sat: 0.529, dul: 0.402, cll: 0.242, adry: 0.242,
+       init_water: 0.402, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.25, organic_n_pct: 0.055,
+       min_fraction: 0.1, init_no3: 8.025537634408602}
+    - {depth_mm: 300.0, sat: 0.541, dul: 0.444, cll: 0.286, adry: 0.286,
+       init_water: 0.444, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.22, organic_n_pct: 0.02,
+       min_fraction: 0.05, init_no3: 6.437139784946238}
+    - {depth_mm: 300.0, sat: 0.528, dul: 0.398, cll: 0.268, adry: 0.268,
+       init_water: 0.398, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.25, organic_n_pct: 0.016,
+       min_fraction: 0.05, init_no3: 0.0}

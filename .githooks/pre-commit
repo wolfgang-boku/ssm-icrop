@@ -1,0 +1,12 @@
+#!/bin/sh
+# Refuse commits on main: changes reach main only through a pull request
+# (CONTRIBUTING.md, "Branches").
+
+branch=$(git symbolic-ref --short -q HEAD)
+if [ "$branch" = "main" ]; then
+    echo "pre-commit: refusing to commit on main." >&2
+    echo "Create a topic branch first, e.g.:" >&2
+    echo "    git switch -c fix/<short-description>" >&2
+    echo "See CONTRIBUTING.md, \"Branches\"." >&2
+    exit 1
+fi

@@ -1,0 +1,74 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it as below, together with the
+  original SSM-iCrop model and the SSM modelling approach listed under
+  references.
+title: "ssm-icrop: a Python port of the SSM-iCrop crop simulation model"
+type: software
+authors:
+  - family-names: Fuchs
+    given-names: Wolfgang
+    orcid: "https://orcid.org/0000-0003-2202-7979"
+    website: "https://fuchs-modellierung.at"
+version: 0.1.0
+date-released: 2026-11-05
+repository-code: "https://github.com/wolfgang-boku/ssm-icrop"
+license: MIT
+keywords:
+  - crop model
+  - crop simulation
+  - agronomy
+  - SSM
+  - iCrop
+references:
+  - type: software
+    title: SSM-iCrop
+    authors:
+      - family-names: Soltani
+        given-names: Afshin
+    version: "2022-05-29"
+    url: "https://sites.google.com/view/ssm-crop-models/home"
+  - type: book
+    title: "Modeling Physiology of Crop Development, Growth and Yield"
+    authors:
+      - family-names: Soltani
+        given-names: Afshin
+      - family-names: Sinclair
+        given-names: Thomas R.
+    year: 2012
+    publisher:
+      name: CABI
+      city: Wallingford
+  - type: article
+    title: "SSM-Wheat: a simulation model for wheat development, growth and yield"
+    authors:
+      - family-names: Soltani
+        given-names: Afshin
+      - family-names: Maddah
+        given-names: V.
+      - family-names: Sinclair
+        given-names: Thomas R.
+    year: 2013
+    journal: International Journal of Plant Production
+    volume: 7
+    start: 711
+    end: 740
+  - type: generic
+    title: "Crop modeling with simple simulation models (SSM)"
+    authors:
+      - family-names: Soltani
+        given-names: Afshin
+      - family-names: Sinclair
+        given-names: Thomas R.
+    year: 2025
+    collection-type: book
+    collection-title: "Current crop models: State-of-the-art and future developments"
+    editors:
+      - family-names: Hoogenboom
+        given-names: Gerrit
+    publisher:
+      name: Burleigh Dodds Science Publishing
+      city: Cambridge
+    start: 153
+    end: 198
+    doi: 10.19103/AS.2025.0155.06

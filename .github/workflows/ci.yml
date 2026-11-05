@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # The same check as the local commit-msg hook (.githooks/), for every
+  # commit a pull request adds -- the hook only runs where it is enabled.
+  commit-messages:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        run: >
+          python3 scripts/check_commit_msg.py
+          --range ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      # --locked installs exactly the versions in uv.lock and fails if the
+      # lockfile is out of date with pyproject.toml.
+      - name: Install project
+        run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
+
+      # `ruff format` is deliberately NOT a gate: the codebase has never been
+      # formatted with it, so enforcing it now would bury real changes under a
+      # reformat of most files. Run it manually if you want it.
+      - name: Lint
+        run: uv run ruff check src/ tests/ scripts/
+
+      - name: Tests
+        run: uv run pytest -q
+
+      # The checks that actually matter: the verification against the reference
+      # output of the original VBA model
+      # (data/verification/2022-05-29/wheat_gorgan_reference_output.csv) and the parameter
+      # extraction from SSM-iCrop/SSM_iCrop__2022_05_29.xlsm. Both files are
+      # committed. A missing CSV fails test_verification.py, but a missing workbook
+      # only SKIPS test_crop_params_extraction.py -- neither flag below turns a
+      # skip into a failure. `-W error::UserWarning` fails the run if the
+      # unverified hourly VPD method (dm_production.py) is ever exercised.
+      - name: VBA verification and parameter extraction
+        run: |
+          uv run pytest tests/test_verification.py tests/test_config_driven_run.py \
+            tests/test_crop_params_extraction.py tests/test_outputs_columns.py \
+            -q -x -W error::UserWarning

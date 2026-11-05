@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ssm-icrop"
+version = "0.1.0"
+description = "Python port of the SSM-iCrop crop simulation model (wheat, maize, grain legumes)"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Wolfgang Fuchs" }]
+requires-python = ">=3.11"
+keywords = ["crop model", "crop simulation", "agronomy", "SSM", "iCrop", "wheat", "maize", "legumes"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4",
+    "matplotlib>=3.8",
+    "openpyxl>=3.1",
+    "xlrd>=2.0",
+]
+
+[project.urls]
+Repository = "https://github.com/wolfgang-boku/ssm-icrop"
+Issues = "https://github.com/wolfgang-boku/ssm-icrop/issues"
+Changelog = "https://github.com/wolfgang-boku/ssm-icrop/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ssm_icrop"]
+
+[tool.ruff]
+# Comments in this port carry VBA line references and short explanations inline;
+# 88 forced those onto continuation lines and hurt readability more than it helped.
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

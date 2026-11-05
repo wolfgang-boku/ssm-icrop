@@ -1,0 +1,69 @@
+# Rainfed wheat "Tajan" at Gorgan -- the "Taj1-WaterLim" reference scenario,
+# verified against the reference output (see tests/test_verification.py).
+#
+# Identical to gorgan_wheat_potential.yaml except the names and water=2
+# (rainfed): the soil water balance runs, with curve-number runoff and no
+# irrigation. The verification workbook's Manag block for this scenario has
+# the name "Taj1-WaterLim" (docs/verification.md).
+
+name: "Taj1-WaterLim"
+crop_file: "../crops/wheat.yaml"
+
+location:
+  name: "Gorgan"
+  latitude: 36.85
+  vpdf: 0.63             # VPD coefficient, Gorgan-specific (Tabriz is 0.75)
+  temp_change: 0.0       # tchng
+  precip_change: 1.0     # pchng
+  co2: 385.0
+  weather_file: "../../data/weather/gorgan.csv"
+
+management:
+  name: "Taj1-WaterLim"
+  fix_find: 0            # fixed sowing date
+  plant_year: 2005       # Fyear
+  sim_years: 1           # yrno
+  sim_doy: 340
+  pdoy: 348              # Fpdoy
+  lpdoy: 365
+  stop_doy: 400          # >365 in the source sheet, i.e. effectively disabled
+  sow_tmp: 5.5
+  sow_wat: 60.0
+  plant_density: 386.0   # Pden
+  water: 2               # rainfed -- soil water balance, no irrigation
+  nitrogen: 0            # no N balance
+  irg_level: 0.5         # IRGLVL, unused while water=2
+
+soil:
+  name: "Danesh"
+  n_layers: 5            # NLYER -- the sheet has 6 filled rows, VBA uses 5
+  ldrain: 5.0
+  salb: 0.13
+  cn: 73.0               # CN2
+  layers:
+    # depth_mm | sat | dul | cll | adry | init_water | drainf | N params
+    - {depth_mm: 150.0, sat: 0.525, dul: 0.376, cll: 0.204, adry: 0.068,
+       init_water: 0.339, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.113,
+       min_fraction: 0.1, init_no3: 7.928516129032258}
+    - {depth_mm: 150.0, sat: 0.525, dul: 0.376, cll: 0.204, adry: 0.068,
+       init_water: 0.364, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.113,
+       min_fraction: 0.1, init_no3: 6.060193548387096}
+    - {depth_mm: 300.0, sat: 0.524, dul: 0.377, cll: 0.23, adry: 0.23,
+       init_water: 0.381375, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.095,
+       min_fraction: 0.1, init_no3: 9.825290322580644}
+    - {depth_mm: 300.0, sat: 0.529, dul: 0.402, cll: 0.242, adry: 0.242,
+       init_water: 0.402, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.25, organic_n_pct: 0.055,
+       min_fraction: 0.1, init_no3: 8.025537634408602}
+    - {depth_mm: 300.0, sat: 0.541, dul: 0.444, cll: 0.286, adry: 0.286,
+       init_water: 0.444, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.22, organic_n_pct: 0.02,
+       min_fraction: 0.05, init_no3: 6.437139784946238}
+    # 6th row present in the sheet but outside NLYER=5, kept for reference:
+    - {depth_mm: 300.0, sat: 0.528, dul: 0.398, cll: 0.268, adry: 0.268,
+       init_water: 0.398, drainf: 0.4,
+       coarse_fraction: 0.0, bulk_density: 1.25, organic_n_pct: 0.016,
+       min_fraction: 0.05, init_no3: 0.0}
