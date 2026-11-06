@@ -113,6 +113,7 @@ incomplete model.
 ```
 src/ssm_icrop/      the model, one module per section of the original VBA code
 configs/crops/      crop parameters, extracted from the 2022 source workbook
+configs/soils/      soil parameters, extracted from the 2022 source workbook
 configs/example/    example scenarios
 data/weather/       example daily weather (Gorgan, Isfahan, Tabriz; Iran)
 data/verification/  reference output (golden master), one directory per model version
@@ -130,13 +131,15 @@ SSM-iCrop/          2022 source workbook and its verification workbook
   and the reasoning. A silent correction would make the port disagree with the
   model it claims to reproduce.
 - **Every formula is traceable.** Comments cite the `iCrop.vba` line they port.
-- **Parameters come from the workbook.** `scripts/extract_crop_params.py` reads
-  crop parameters straight from the 2022 source workbook into YAML instead of
-  transcribing them by hand:
+- **Parameters come from the workbook.** `scripts/extract_crop_params.py` and
+  `scripts/extract_soil_params.py` read crop and soil parameters straight from
+  the 2022 source workbook into YAML instead of transcribing them by hand:
 
   ```bash
   python scripts/extract_crop_params.py --list
   python scripts/extract_crop_params.py --column D -o configs/crops/wheat.yaml
+  python scripts/extract_soil_params.py --list
+  python scripts/extract_soil_params.py --row 24 -o configs/soils/danesh.yaml
   ```
 
 - **Verification is against the original program's output**, not only against
