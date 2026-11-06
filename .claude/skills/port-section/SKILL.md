@@ -42,7 +42,9 @@ name or a unit:
   `scripts/extract_crop_params.py` with the `iCrop.vba` line that reads it, then
   regenerate the crop YAMLs. Rows 80-87 are overloaded per crop type.
 - **Location / Manag / Soil sheet**: it belongs on a dataclass in `inputs.py`.
-  Check whether it is already there under a different name.
+  Check whether it is already there under a different name. A new Soil-sheet
+  column also goes into `LAYER_COLUMNS` or `SOIL_COLUMNS` in
+  `scripts/extract_soil_params.py`; then regenerate the soil YAMLs.
 - **Computed in another section**: it belongs on `SimState`, not in a params
   dataclass.
 - **Hardcoded in the VBA** (e.g. `VDSAT=50`, `iCrop.vba:228-232`): a literal with

@@ -11,6 +11,7 @@
 
 name: "Taj1 Arab"
 crop_file: "../crops/wheat.yaml"
+soil_file: "../soils/danesh.yaml"
 
 location:
   name: "Gorgan"
@@ -64,35 +65,3 @@ management:
       ntrsh1: 18.0
       napply1: 7.0
       nvolf1: 10.0
-
-soil:
-  name: "Danesh"
-  n_layers: 5
-  ldrain: 5.0
-  salb: 0.13
-  cn: 73.0
-  layers:
-    - {depth_mm: 150.0, sat: 0.525, dul: 0.376, cll: 0.204, adry: 0.068,
-       init_water: 0.339, drainf: 0.4,
-       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.113,
-       min_fraction: 0.1, init_no3: 7.928516129032258}
-    - {depth_mm: 150.0, sat: 0.525, dul: 0.376, cll: 0.204, adry: 0.068,
-       init_water: 0.364, drainf: 0.4,
-       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.113,
-       min_fraction: 0.1, init_no3: 6.060193548387096}
-    - {depth_mm: 300.0, sat: 0.524, dul: 0.377, cll: 0.23, adry: 0.23,
-       init_water: 0.381375, drainf: 0.4,
-       coarse_fraction: 0.0, bulk_density: 1.26, organic_n_pct: 0.095,
-       min_fraction: 0.1, init_no3: 9.825290322580644}
-    - {depth_mm: 300.0, sat: 0.529, dul: 0.402, cll: 0.242, adry: 0.242,
-       init_water: 0.402, drainf: 0.4,
-       coarse_fraction: 0.0, bulk_density: 1.25, organic_n_pct: 0.055,
-       min_fraction: 0.1, init_no3: 8.025537634408602}
-    - {depth_mm: 300.0, sat: 0.541, dul: 0.444, cll: 0.286, adry: 0.286,
-       init_water: 0.444, drainf: 0.4,
-       coarse_fraction: 0.0, bulk_density: 1.22, organic_n_pct: 0.02,
-       min_fraction: 0.05, init_no3: 6.437139784946238}
-    - {depth_mm: 300.0, sat: 0.528, dul: 0.398, cll: 0.268, adry: 0.268,
-       init_water: 0.398, drainf: 0.4,
-       coarse_fraction: 0.0, bulk_density: 1.25, organic_n_pct: 0.016,
-       min_fraction: 0.05, init_no3: 0.0}

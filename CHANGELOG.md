@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Soil parameter extraction from the 2022 source workbook
+  (`scripts/extract_soil_params.py`) and the soil file `configs/soils/danesh.yaml`.
+
+### Changed
+
+- Scenarios reference their soil with `soil_file`, as they reference their
+  crop with `crop_file`; an inline `soil` block is rejected.
+
+### Fixed
+
+- The example scenarios carried eight soil values as displayed in the Soil
+  sheet (e.g. LL 0.204) instead of the doubles it stores and VBA reads
+  (0.20400000000000001).
+
 ## [0.1.0] - 2026-11-05
 
 First public release of the Python port of SSM-iCrop 2022-05-29.
