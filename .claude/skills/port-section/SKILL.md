@@ -24,7 +24,7 @@ Read the whole section before writing anything. Section boundaries:
 | `DMDistribution` | 977-1114 | done |
 | `SoilWater` | 1115-1415 | done (verified rainfed only) |
 | `PlantN` | 1416-1574 | **stub** |
-| `SoilN` | 1575-1766 | **stub** |
+| `SoilN` | 1575-1766 | done (verified on pre-sowing days only) |
 | `FindSimSowDate` | 1767-2002 | done for FixFind=0 only, incl. spin-up |
 | `DailyPrintOut` | 2003-2098 | schema done (outputs.py), writer stub |
 | `SummaryPrintOut` | 2102-2486 | schema done, writer stub |

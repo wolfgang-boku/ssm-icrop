@@ -38,6 +38,8 @@ from .inputs import (
     load_crop_params,
 )
 from .phenology import LegumeParams, MaizeParams, WheatParams, step_phenology
+from .soil_n import SEASON_CARRY_FIELDS as SOIL_N_CARRY_FIELDS
+from .soil_n import step_soil_n
 from .soil_water import SEASON_CARRY_FIELDS, SoilWaterParams, step_soil_water
 from .sowing import find_sim_and_sow_rows, read_spinup_day
 from .state import SimState
@@ -47,7 +49,7 @@ PhenologyParams = WheatParams | MaizeParams | LegumeParams
 
 # Daily variables recorded by the current pipeline, as
 # {output column: SimState attribute}. Not yet the full 63-column DailyPrintOut
-# set (see outputs.DailyRecord) -- the N columns need PlantN/SoilN.
+# set (see outputs.DailyRecord) -- the plant N columns need PlantN.
 # tests/test_verification.py compares against these names.
 _DAILY_FIELDS = {
     "year": "yr", "doy": "doy", "dap": "dap", "tmp": "tmp", "srad": "srad",
@@ -60,6 +62,9 @@ _DAILY_FIELDS = {
     "sevp": "sevp", "tr": "tr", "drain": "drain", "atswrz": "atswrz",
     "ftswrz": "ftswrz", "crain": "crain", "cirgw": "cirgw", "irgno": "irgno",
     "crunof": "crunof", "ce": "ce", "ctr": "ctr", "cdrain": "cdrain",
+    "nfert": "nfert", "cnfert": "cnfert", "nvol": "nvol", "cnvol": "cnvol",
+    "nleach": "nleach", "cnleach": "cnleach", "snmin": "snmin", "cnmin": "cnmin",
+    "sndnit": "sndnit", "cndnit": "cndnit", "snavl": "snavl", "cnsol": "cnsol",
 }
 
 
@@ -138,8 +143,8 @@ def _check_modes_supported(water: int, nitrogen: int) -> None:
     """Fail loudly on modes whose modules are not ported yet."""
     if nitrogen == 2:
         raise NotImplementedError(
-            "nitrogen=2 needs CropLAIN, PlantN and SoilN "
-            "(crop_lai.step_lai_n, plant_n.py, soil_n.py are still stubs)"
+            "nitrogen=2 needs CropLAIN and PlantN "
+            "(crop_lai.step_lai_n and plant_n.py are still stubs)"
         )
 
 
@@ -206,7 +211,17 @@ def _step_day(
     if soil_water is not None:  # water = 1, 2 or 3
         _step_soil_water(state, soil_water)
 
-    # if nitrogen = 2 Then GoSub SoilN       -- gated off as PlantN
+    if nitrogen == 2:
+        _step_soil_n(state, soil_water)
+
+
+def _step_soil_n(state: SimState, inputs: _SoilWaterInputs | None) -> None:
+    if inputs is None:
+        # ManagementConfig rejects nitrogen=2 with water=0; this catches
+        # callers that bypass it. Without SoilWater the VBA has no soil
+        # layers (NLYER is set only at iCrop.vba:1138).
+        raise ValueError("nitrogen=2 needs the soil water balance (water 1, 2 or 3)")
+    step_soil_n(state, inputs.soil, inputs.management)
 
 
 def _step_soil_water(state: SimState, inputs: _SoilWaterInputs) -> None:
@@ -233,9 +248,10 @@ def _run_season(
     """Run one season (one iteration of VBA's `For yrCntr` body, iCrop.vba:75-96).
 
     Starts with the FindSimSowDate spin-up: every day after the simulation
-    start up to and including sowing runs SoilWater with DAP=0 and is recorded
-    (iCrop.vba:1779-1797). `previous` is the last season's state, for the few
-    soil water values the VBA carries across seasons (SEASON_CARRY_FIELDS).
+    start up to and including sowing runs SoilWater (and SoilN) with DAP=0 and
+    is recorded (iCrop.vba:1779-1797). `previous` is the last season's state,
+    for the few soil water and N values the VBA carries across seasons
+    (soil_water.SEASON_CARRY_FIELDS, soil_n.SEASON_CARRY_FIELDS).
     `temp_change` and `precip_change` are the Location sheet's climate-change
     adjustments tchng (added to TMAX/TMIN) and pchng (multiplying RAIN),
     iCrop.vba:114-115, applied to every day read, before sowing as well
@@ -251,7 +267,7 @@ def _run_season(
     )
     state = SimState()
     if previous is not None:
-        for name in SEASON_CARRY_FIELDS:
+        for name in SEASON_CARRY_FIELDS + SOIL_N_CARRY_FIELDS:
             value = getattr(previous, name)
             setattr(state, name, list(value) if isinstance(value, list) else value)
     records: list[dict] = []
@@ -260,6 +276,8 @@ def _run_season(
         read_spinup_day(state, weather_df, row_idx, temp_change, precip_change)
         if soil_water is not None:
             _step_soil_water(state, soil_water)
+        if nitrogen == 2:
+            _step_soil_n(state, soil_water)
         state.das += 1
         records.append(_record(state))
 

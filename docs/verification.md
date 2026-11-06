@@ -43,14 +43,17 @@ Shared inputs: wheat cultivar "Tajan" (Crop sheet column D), Gorgan (Location
 sheet row 7, latitude 36.85°N), soil at `SoilRowNo` 24, simulation start DOY
 340 and sowing DOY 348 of 2005, plant density 386 m⁻².
 
-The N-limited scenario uses `water=1` rather than `water=0` because soil N
-mineralization depends on each layer's `FTSW` (`iCrop.vba:1632-1633`). With
-`water=0` the soil water balance never runs, and `FTSW` stays 0 in every layer
-except layer 1, which wheat and legume phenology set to 0.5 on crop day 1
-(`:283`, `:603`). Whether `water=1` makes the scenario water-unlimited is open
-until `SoilN` is ported: mineralization peaks at `FTSW = 0.9` and is 0 at field
-capacity, and automatic irrigation refills the root zone to exactly field
-capacity.
+The N-limited scenario uses `water=1` because `nitrogen = 2` has no soil N
+balance with `water = 0`: the soil water balance never runs, so neither the
+layer count `NLYER` (`iCrop.vba:1138`) nor the layer water content `WL` is
+set. In this workbook `Taj1 Arab` runs first and leaves `NLYER = 5`, so with
+`water = 0` `SoilN` would stop the VBA with a division by zero when it first
+computes the N concentration (`iCrop.vba:1598`). In a run without an earlier
+water balance `NLYER` is empty and `SoilN` simulates no layer at all. The port
+rejects the combination. Whether `water=1` makes the
+scenario water-unlimited is open until `PlantN` is ported: mineralization
+peaks at `FTSW = 0.9` and is 0 at field capacity (`iCrop.vba:1632-1633`), and
+automatic irrigation refills the root zone to exactly field capacity.
 
 ## How the verification workbook was built
 
@@ -169,9 +172,15 @@ macro run, VBA globals carry over between scenarios, and the spin-up rows of
 `DRAIN` is blank on the first spin-up day (`FLOUT` not yet assigned) and is
 compared as 0.
 
-**`Taj1 Arab`** (`water = 3`) and **`Taj1-Nlim`** (`water = 1`): only the 16
-water columns on the eight days before sowing are compared. From sowing on,
-both scenarios run `nitrogen = 2`, which needs `PlantN` and `SoilN`.
+**`Taj1 Arab`** (`water = 3`) and **`Taj1-Nlim`** (`water = 1`) run from
+`configs/example/gorgan_wheat_taj1.yaml`. Only the eight days before sowing are
+compared: the 16 water columns and the 12 `SoilN` columns
+
+`NFERT CNFERT NVOL CNVOL NLEACH CNLEACH NMIN CNMIN NDNIT CNDNIT SNAVL NSOL`
+
+with the same tolerance; the port matches to about 1e-16. (`NMIN`, `NDNIT`
+and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.) From sowing
+on, both scenarios need `PlantN` and `CropLAIN`.
 
 `tests/test_crop_params_extraction.py` additionally checks that the crop
 parameters read from the 2022 source workbook by `scripts/extract_crop_params.py`
@@ -261,6 +270,40 @@ irrigation.
 
 **Not tested at all:** maize and legume crops, other soils and layer counts.
 
+### `SoilN` (`soil_n.py`, `iCrop.vba:1575-1766`)
+
+**Checked against the reference output on the days before sowing only
+(`Taj1 Arab`, `Taj1-Nlim`, eight days):**
+
+| Process | VBA lines | Note |
+|---|---|---|
+| Season initialisation of the N pools | 1577-1618 | `FG = 0` in every layer |
+| Net mineralization, both branches of the water factor | 1627-1642 | `TMP` below 35 °C |
+| DOY-based fertilizer and volatilization (`NATiT = 3`) | 1663-1670, 1688-1689 | one event, on the sowing day |
+| Downward movement and leaching | 1692-1698 | only `LDRAIN = NLYER` |
+| Layer update, concentration, plant-available N | 1730-1744 | uptake is 0: `NUP = 0` before sowing |
+| N in the top 600 mm | 1747-1759 | layers end exactly at 600 mm |
+
+**Unit tests only, never checked against the reference output:**
+
+| Process | VBA lines | Why not covered |
+|---|---|---|
+| Reset of `CNMIN`, `CNLEACH`, `CNDNIT` at DAP 1 | 1620-1624 | needs crop days, which need `PlantN` |
+| Plant uptake per layer | 1725-1727 | same |
+| Denitrification, and layer 2 switched off under a thick layer 1 | 1701-1722 | `FTSW <= 1` in layers 1 and 2 before sowing |
+| DAP- and CBD-based fertilizer (`NATiT` 1, 2), and the CBD same-day bug | 1646-1662 | the scenarios use `NATiT = 3` |
+| Automatic N application (`NATiT = 4`) | 1671-1686 | same |
+| Mineralization stopping at 200 mg N l⁻¹, no movement at ≤ 1 mg N l⁻¹ | 1636, 1694 | concentrations stay between |
+| A layer straddling 600 mm | 1608-1611 | |
+| Values carried from one season into the next (`NAVL`, `SNAVL`, `NUP`, `BNF`), which drain the soil before sowing | 1726 | the reference output has one season |
+
+The reference output does show the carry-over between *scenarios*: the
+spin-up rows of `Taj1-Nlim` print `CNUP = 18.96` from the end of `Taj1 Arab`.
+The port runs each scenario on its own and does not reproduce this. It does
+not affect the soil N columns: `NAVL` is re-dimensioned, and so zeroed, for
+every scenario (`iCrop.vba:64`), so the uptake `SoilN` removes before sowing
+is 0 in a scenario's first season, whatever `NUP` and `BNF` were.
+
 ## Running it
 
 ```bash
@@ -270,7 +313,7 @@ python scripts/compare_verification.py      # table: mismatches and max |diff| p
 
 ## Extending it
 
-When `PlantN` and `SoilN` are ported, add a test class per remaining scenario
+When `PlantN` and `CropLAIN` are ported, add a test class per remaining scenario
 to `tests/test_verification.py` that loads the matching `sName` slice, following
 the `Taj1-WaterLim` class.
 

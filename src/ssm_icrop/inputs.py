@@ -69,7 +69,7 @@ class NitrogenEvent:
 
     time: float                # col 2  -- DAPNF: DAP, CBD or DOY per timing_basis
     amount: float              # col 3  -- NFERTI (g N m-2)
-    volatilization_fraction: float  # col 4  -- VOLFI
+    volatilization_fraction: float  # col 4  -- VOLFI, in per cent (/ 100 at :1650)
 
 
 @dataclass
@@ -81,14 +81,15 @@ class AutoNitrogen:
     of the management inputs.
     """
 
-    ntrsh0: float              # row +11: soil N threshold triggering basal appl.
-    nvolf0: float              # row +12: volatilization fraction, basal
-    bd_bfrt: float             # row +14: bdBFRT, begin of fertilization window
-    bd_tfrt: float             # row +15: bdTFRT, end of fertilization window
-    frtwat: float              # row +16: FRTWAT, water needed to apply N
-    ntrsh1: float              # row +17: soil N threshold, top-dressing
-    napply1: float             # row +18: amount applied per top-dressing
-    nvolf1: float              # row +19: volatilization fraction, top-dressing
+    ntrsh0: float              # row +11: CNSOL60 (g N m-2, top 600 mm) topped up to at DAP 1
+    nvolf0: float              # row +12: volatilization of that application, per cent
+    bd_bfrt: float             # row +14: bdBFRT, top-dressing window start (CBD, exclusive)
+    bd_tfrt: float             # row +15: bdTFRT, top-dressing window end (CBD, exclusive)
+    frtwat: float              # row +16: FRTWAT, ATSWRZ (mm) needed to top-dress
+    ntrsh1: float              # row +17: CNSOL60 (g N m-2) below which to top-dress
+    napply1: float             # row +18: amount applied per top-dressing (g N m-2)
+    nvolf1: float              # row +19: volatilization of a top-dressing, per cent
+    # SoilN divides nvolf0 and nvolf1 by 100 (iCrop.vba:1675, 1681).
 
 
 @dataclass
@@ -100,16 +101,11 @@ class NitrogenSchedule:
     auto: AutoNitrogen | None = None
 
     def __post_init__(self) -> None:
-        if self.timing_basis in (1, 2, 3):
-            if not self.events:
-                raise ValueError(
-                    f"nitrogen timing_basis={self.timing_basis} needs at least one "
-                    f"application event"
-                )
-        elif self.timing_basis == 4:
-            if self.auto is None:
-                raise ValueError("nitrogen timing_basis=4 (automated) needs `auto` params")
-        else:
+        # FN is the VBA's explicit event count; in Python len(events) is it.
+        # FN = 0 is valid: no application (the loops at :1647-1669 run 0 times).
+        if self.timing_basis == 4 and self.auto is None:
+            raise ValueError("nitrogen timing_basis=4 (automated) needs `auto` params")
+        if self.timing_basis not in (1, 2, 3, 4):
             raise ValueError(
                 f"nitrogen timing_basis must be 1 (DAP), 2 (CBD), 3 (DOY) or "
                 f"4 (automated), got {self.timing_basis}"
@@ -154,6 +150,18 @@ class ManagementConfig:
             raise ValueError("water=3 (scheduled irrigation) needs an `irrigation` block")
         if self.nitrogen == 2 and self.nitrogen_schedule is None:
             raise ValueError("nitrogen=2 needs a `nitrogen_schedule` block")
+        if self.nitrogen == 2 and self.water == 0:
+            # Without SoilWater, NLYER (:1138) and WL (:1159) are never set
+            # this season. VBA then does one of two things, depending on
+            # earlier scenarios of the same macro run: with NLYER still Empty
+            # every SoilN layer loop runs 0 times and only the fertilizer sums
+            # grow (no soil N at all); with NLYER carried over from an earlier
+            # scenario it stops with a division by zero at :1598. Neither is
+            # a soil N balance, and the port runs each scenario on its own.
+            raise ValueError(
+                "nitrogen=2 needs water 1, 2 or 3: with water=0 the VBA has no "
+                "soil layers (NLYER is set only by SoilWater, iCrop.vba:1138)"
+            )
 
         # iCrop.vba:122 -- simulation must start at least one day before sowing,
         # silently corrected rather than rejected.
