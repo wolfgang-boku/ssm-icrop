@@ -178,7 +178,10 @@ compared: the 16 water columns and the 12 `SoilN` columns
 
 `NFERT CNFERT NVOL CNVOL NLEACH CNLEACH NMIN CNMIN NDNIT CNDNIT SNAVL NSOL`
 
-with the same tolerance; the port matches to about 1e-16. (`NMIN`, `NDNIT`
+with a tolerance of 1e-12; the port matches exactly (difference 0.0) once the
+soil is read as the doubles the workbook stores (`configs/soils/danesh.yaml`).
+The tighter tolerance leaves room only for platform differences in `exp` and
+`log`. (`NMIN`, `NDNIT`
 and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.) From sowing
 on, both scenarios need `PlantN` and `CropLAIN`.
 

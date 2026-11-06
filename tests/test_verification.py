@@ -110,6 +110,12 @@ VBA_TO_PY = {
 # could let a small consequential error through.
 ATOL = 1e-6
 
+# The pre-sowing rows of the nitrogen=2 scenarios run only SoilWater and SoilN
+# for eight days and match the reference exactly (0.0) with the soil doubles
+# from configs/soils/. 1e-12 keeps room for platform differences in exp/log,
+# which SoilN's mineralization uses, and catches what 1e-6 would not.
+SPINUP_ATOL = 1e-12
+
 
 def _load_vba_reference(scenario: str) -> pd.DataFrame:
     df = pd.read_csv(REFERENCE_OUTPUT_CSV)
@@ -272,5 +278,6 @@ def test_spinup_irrigated_nitrogen_scenarios(scenario, water, irg_level):
     assert vba_daily.loc[spinup, "nfert"].iloc[-1] == 2.3
     for col in [*VBA_WATER_TO_PY.values(), *VBA_SOIL_N_TO_PY.values()]:
         _assert_matches(
-            py_daily.loc[spinup, col], vba_daily.loc[spinup, col], vba_daily["DAP"], ATOL
+            py_daily.loc[spinup, col], vba_daily.loc[spinup, col], vba_daily["DAP"],
+            SPINUP_ATOL,
         )
