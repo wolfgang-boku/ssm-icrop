@@ -120,6 +120,12 @@ literals in `tests/test_verification.py`, so generated YAML is as trustworthy as
 the transcription was — and more precise (the workbook stores IRUE as
 2.4200000000000004; the literal rounded it to 2.42).
 
+`scripts/extract_soil_params.py` does the same for one Soil-sheet block
+(`configs/soils/danesh.yaml`); scenarios reference it with `soil_file`. The sheet
+displays rounded values but stores other doubles (LL 0.20400000000000001), and
+VBA reads the stored one. `tests/test_soil_params_extraction.py` fails if the
+soil file drifts from the workbook.
+
 Two parameters that sit in `DMProductionParams` are **Location**-sheet values in
 the VBA and are injected by `model.build_params`, not stored in crop files:
 `vpdf` (`iCrop.vba:113`) and `co2` (`:116`). Gorgan's VPDF is 0.63, Tabriz's 0.75.
@@ -171,10 +177,12 @@ pytest tests/test_weather.py        # run a single test file
 ruff check src/ tests/ scripts/     # lint (CI gates this; format is not gated)
 ```
 
-### Regenerate crop parameters from the workbook
+### Regenerate crop and soil parameters from the workbook
 ```bash
 python scripts/extract_crop_params.py --list                 # cultivars + columns
 python scripts/extract_crop_params.py --column D -o configs/crops/wheat.yaml
+python scripts/extract_soil_params.py --list                  # soils + SoilRowNo
+python scripts/extract_soil_params.py --row 24 -o configs/soils/danesh.yaml
 ```
 
 ### Run a scenario from config
