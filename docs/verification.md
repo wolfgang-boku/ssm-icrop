@@ -308,10 +308,17 @@ irrigation.
 
 The reference output does show the carry-over between *scenarios*: the
 spin-up rows of `Taj1-Nlim` print `CNUP = 18.96` from the end of `Taj1 Arab`.
-The port runs each scenario on its own and does not reproduce this. It does
-not affect the soil N columns: `NAVL` is re-dimensioned, and so zeroed, for
-every scenario (`iCrop.vba:64`), so the uptake `SoilN` removes before sowing
-is 0 in a scenario's first season, whatever `NUP` and `BNF` were.
+The port runs each scenario on its own, with `NUP = BNF = 0` before sowing,
+and does not reproduce this. The re-dimensioning at `iCrop.vba:64` zeroes
+`NAVL` only for the first spin-up day: that day's update (`:1739`) makes it
+positive again, so from the second spin-up day on `SoilN` removes
+`NAVL / SNAVL * (NUP − BNF)` with the `NUP` and `BNF` the previous scenario
+left. The soil N columns agree in the reference run only because those were 0:
+`Taj1 Arab` ran first, and it ended past `bdTSG`, where `PlantN` sets
+`NUP = 0` (`:1435-1436`), with `BNF = 0` (wheat does not fix N). The port would
+differ from a macro run in which the previous `nitrogen = 2` scenario ends with
+`NUP ≠ BNF`: a legume, whose `BNF` that branch leaves at its last value, or a
+season stopped before `bdTSG`.
 
 ## Running it
 

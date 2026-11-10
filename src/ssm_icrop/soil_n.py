@@ -48,13 +48,18 @@ from .state import SimState
 # LocManagInputs nor iniSNB resets (NAVL is ReDim'd only per scenario, :64).
 # On every spin-up day SoilN removes NAVL / SNAVL * (NUP - BNF) from each layer
 # (:1726), with NUP and BNF left by the last crop day, because PlantN does not
-# run before sowing.
+# run before sowing. NUP - BNF < 0 adds N: past bdTSG PlantN sets NUP = 0 but
+# leaves BNF at its last value (:1435-1436).
+# NAVL's ReDim zeroes it only until the first spin-up day's update (:1739), so
+# the NUP and BNF of the previous scenario in a VBA macro run reach SoilN from
+# the second spin-up day on; the port runs each scenario on its own.
 SEASON_CARRY_FIELDS = ("navl", "snavl", "nup", "bnf")
 
 TOP_DEPTH = 600.0         # mm, depth of the CNSOL60 sum (:1604)
 NCON_MIN_MIN = 0.0002      # g N g-1 water: mineralization stops here (:1636)
 NCON_DNIT_MAX = 0.0004     # g N g-1 water: cap on denitrified concentration (:1706)
-NCON_MOBILE = 0.000001     # g N g-1 water: below it N neither moves nor is taken up (:1694, :1739)
+NCON_MOBILE = 0.000001     # g N g-1 water: at or below it N does not move (:1694); this much
+#                            is never available for uptake, whatever NCON (:1739)
 SNAVL_EPS = 0.000001       # added to SNAVL against division by zero (:1726)
 THICK_LAYER1 = 250.0       # mm: above it, layer 2 does not denitrify (:1713)
 
@@ -157,7 +162,7 @@ def _scheduled_application(state: SimState, schedule: NitrogenSchedule) -> tuple
 
 
 def _automatic_application(state: SimState, schedule: NitrogenSchedule) -> tuple[float, float]:
-    """NATiT 4: automatic N application, wheat (iCrop.vba:1671-1686).
+    """NATiT 4: automatic N application, any crop (iCrop.vba:1671-1686).
 
     At DAP 1 the top 600 mm are topped up to ntrsh0. On every other day,
     spin-up days included, napply1 is applied while CBD is inside the window
@@ -233,7 +238,8 @@ def _plant_uptake(state: SimState, n_layers: int) -> list[float]:
     """Today's uptake NUP - BNF, shared by yesterday's available N (iCrop.vba:1725-1727).
 
     Before sowing PlantN does not run, so NUP and BNF are whatever the last
-    crop day left (0 in the first season of a run).
+    crop day left: 0 in a scenario's first season here, where each scenario
+    runs on its own, but the previous scenario's values in a VBA macro run.
     """
     nu = [0.0] * 10
     for i in range(n_layers):

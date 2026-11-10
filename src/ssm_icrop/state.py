@@ -137,7 +137,8 @@ class SimState:
     # --- plant N (g m-2)
     nup: float = 0.0       # N taken up today (daily); not reset by LocManagInputs,
     #                        so SoilN reads the last season's value before sowing
-    bnf: float = 0.0       # biological N fixation today (g N m-2), PlantN (:1451)
+    bnf: float = 0.0       # biological N fixation (g N m-2), set by PlantN in its growth
+    #                        branches only (:1451, :1505); kept past bdTSG and before sowing
     nlf: float = 0.0
     nst: float = 0.0
     nveg: float = 0.0

@@ -75,11 +75,11 @@ class NitrogenEvent:
 
 @dataclass
 class AutoNitrogen:
-    """Automatic N application, wheat only (iCrop.vba:153-161, Manag col 12).
+    """Automatic N application (iCrop.vba:153-161, Manag col 12).
 
-    Reached when NATiT == 4. The VBA flags this section as work-in-progress
-    (`<--- ***8989...` at iCrop.vba:153), so treat it as the least-settled part
-    of the management inputs.
+    Reached when NATiT == 4, for any crop: the VBA comment at :153 says "in
+    wheat", but no crop test exists. The same line carries a marker
+    (`<--- ***8989...`) whose meaning the VBA does not state.
     """
 
     ntrsh0: float              # row +11: CNSOL60 (g N m-2, top 600 mm) topped up to at DAP 1
