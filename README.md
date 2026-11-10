@@ -22,7 +22,8 @@ SSM-iCrop is developed by Afshin Soltani. The SSM model is described in:
 
 > Soltani, A., Maddah, V. & Sinclair, T. R. (2013). SSM-Wheat: a simulation
 > model for wheat development, growth and yield. *International Journal of
-> Plant Production* 7, 711–740.
+> Plant Production* 7(4), 711–740.
+> [doi:10.22069/ijpp.2013.1266](https://doi.org/10.22069/ijpp.2013.1266)
 
 The model, its user manuals (wheat, chickpea) and the example weather data are
 available from the **[SSM crop models site](https://sites.google.com/view/ssm-crop-models/home)**.

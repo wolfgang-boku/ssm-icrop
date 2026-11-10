@@ -52,8 +52,10 @@ references:
     year: 2013
     journal: International Journal of Plant Production
     volume: 7
+    issue: 4
     start: 711
     end: 740
+    doi: "10.22069/ijpp.2013.1266"
   - type: generic
     title: "Crop modeling with simple simulation models (SSM)"
     authors:
