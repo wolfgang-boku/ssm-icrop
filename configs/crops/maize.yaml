@@ -75,3 +75,12 @@ soil_water:
   surviv: null
   epcond: null
   ltlrwc: null
+plant_n:
+  slng: 1.35
+  slns: 0.4
+  sncg: 0.0106
+  sncs1: 0.0025
+  sncs2: 0.0025
+  gnc_min: 0.011
+  gnc_max: 0.011
+  mxnup: 0.6

@@ -38,6 +38,8 @@ from .inputs import (
     load_crop_params,
 )
 from .phenology import LegumeParams, MaizeParams, WheatParams, step_phenology
+from .plant_n import SEASON_CARRY_FIELDS as PLANT_N_CARRY_FIELDS
+from .plant_n import PlantNParams, step_plant_n
 from .soil_n import SEASON_CARRY_FIELDS as SOIL_N_CARRY_FIELDS
 from .soil_n import step_soil_n
 from .soil_water import SEASON_CARRY_FIELDS, SoilWaterParams, step_soil_water
@@ -49,7 +51,7 @@ PhenologyParams = WheatParams | MaizeParams | LegumeParams
 
 # Daily variables recorded by the current pipeline, as
 # {output column: SimState attribute}. Not yet the full 63-column DailyPrintOut
-# set (see outputs.DailyRecord) -- the plant N columns need PlantN.
+# set (see outputs.DailyRecord).
 # tests/test_verification.py compares against these names.
 _DAILY_FIELDS = {
     "year": "yr", "doy": "doy", "dap": "dap", "tmp": "tmp", "srad": "srad",
@@ -65,6 +67,8 @@ _DAILY_FIELDS = {
     "nfert": "nfert", "cnfert": "cnfert", "nvol": "nvol", "cnvol": "cnvol",
     "nleach": "nleach", "cnleach": "cnleach", "snmin": "snmin", "cnmin": "cnmin",
     "sndnit": "sndnit", "cndnit": "cndnit", "snavl": "snavl", "cnsol": "cnsol",
+    "nup": "nup", "nlf": "nlf", "nst": "nst", "nveg": "nveg", "ngrn": "ngrn",
+    "cnup": "cnup", "cumbnf": "cumbnf", "nstrs": "nstrs",
 }
 
 
@@ -78,6 +82,7 @@ class ModelParams:
     dm_production: DMProductionParams
     dm_distribution: DMDistributionParams
     soil_water: SoilWaterParams | None = None   # None: crop file has no soil_water section
+    plant_n: PlantNParams | None = None         # None: crop file has no plant_n section
     cultivar: str = ""
 
 
@@ -114,10 +119,6 @@ def build_params(crop: dict, location: LocationConfig) -> ModelParams:
 
     dm_dist = dict(crop["dm_distribution"])
     dm_dist["heat"] = int(dm_dist["heat"])
-    # SNCS belongs to PlantN and is state-dependent there (iCrop.vba:1433).
-    # DMDistributionParams still carries it; 0.0 is inert while nitrogen=0
-    # because NST=0 satisfies the SGR check either way (iCrop.vba:1066).
-    dm_dist.setdefault("sncs", 0.0)
 
     soil_water = None
     if "soil_water" in crop:
@@ -128,6 +129,12 @@ def build_params(crop: dict, location: LocationConfig) -> ModelParams:
         sw["co2"] = location.co2
         soil_water = SoilWaterParams(**sw)
 
+    plant_n = None
+    if "plant_n" in crop:
+        plant_n = PlantNParams(
+            **{k: (0.0 if v is None else v) for k, v in crop["plant_n"].items()}
+        )
+
     return ModelParams(
         crop_type=crop_type,
         cultivar=crop.get("cultivar", ""),
@@ -136,6 +143,7 @@ def build_params(crop: dict, location: LocationConfig) -> ModelParams:
         dm_production=DMProductionParams(**dm_prod),
         dm_distribution=DMDistributionParams(**dm_dist),
         soil_water=soil_water,
+        plant_n=plant_n,
     )
 
 
@@ -143,8 +151,7 @@ def _check_modes_supported(water: int, nitrogen: int) -> None:
     """Fail loudly on modes whose modules are not ported yet."""
     if nitrogen == 2:
         raise NotImplementedError(
-            "nitrogen=2 needs CropLAIN and PlantN "
-            "(crop_lai.step_lai_n and plant_n.py are still stubs)"
+            "nitrogen=2 needs CropLAIN, which is not ported yet"
         )
 
 
@@ -205,14 +212,23 @@ def _step_day(
     step_dm_production(state, params.dm_production)
     step_dm_distribution(state, params.dm_distribution, water_mode=water)
 
-    # if nitrogen = 2 Then GoSub PlantN      -- before SoilWater (iCrop.vba:84-85)
-    # gated off by _check_modes_supported for now
+    if nitrogen == 2:  # before SoilWater (iCrop.vba:84-85)
+        _step_plant_n(state, params)
 
     if soil_water is not None:  # water = 1, 2 or 3
         _step_soil_water(state, soil_water)
 
     if nitrogen == 2:
         _step_soil_n(state, soil_water)
+
+
+def _step_plant_n(state: SimState, params: ModelParams) -> None:
+    if params.plant_n is None:
+        raise ValueError(
+            "nitrogen=2 needs a `plant_n` section in the crop file; "
+            "regenerate it with scripts/extract_crop_params.py"
+        )
+    step_plant_n(state, params.plant_n, params.dm_distribution.gcc)
 
 
 def _step_soil_n(state: SimState, inputs: _SoilWaterInputs | None) -> None:
@@ -251,7 +267,7 @@ def _run_season(
     start up to and including sowing runs SoilWater (and SoilN) with DAP=0 and
     is recorded (iCrop.vba:1779-1797). `previous` is the last season's state,
     for the few soil water and N values the VBA carries across seasons
-    (soil_water.SEASON_CARRY_FIELDS, soil_n.SEASON_CARRY_FIELDS).
+    (SEASON_CARRY_FIELDS of soil_water, soil_n and plant_n).
     `temp_change` and `precip_change` are the Location sheet's climate-change
     adjustments tchng (added to TMAX/TMIN) and pchng (multiplying RAIN),
     iCrop.vba:114-115, applied to every day read, before sowing as well
@@ -267,7 +283,7 @@ def _run_season(
     )
     state = SimState()
     if previous is not None:
-        for name in SEASON_CARRY_FIELDS + SOIL_N_CARRY_FIELDS:
+        for name in SEASON_CARRY_FIELDS + SOIL_N_CARRY_FIELDS + PLANT_N_CARRY_FIELDS:
             value = getattr(previous, name)
             setattr(state, name, list(value) if isinstance(value, list) else value)
     records: list[dict] = []

@@ -365,10 +365,16 @@ the model's own conventions.
 | `NST` | `n_stem` | N in stems | gN m⁻² | float |
 | `NVEG` | `n_veg` | N in vegetative parts | gN m⁻² | float |
 | `NGRN` | `n_grain` | N in grain | gN m⁻² | float |
-| `SNCS` | `stem_n_conc` | Current stem N concentration | gN g⁻¹ | float |
+| `SNCS` | `stem_n_conc_sen` | Stem N concentration at senescence today: `SNCS1` before `bdBSG`, `SNCS2` from it on | gN g⁻¹ | float |
 | `CNUP` | `n_uptake_cum` | Cumulative N uptake | gN m⁻² | float |
+| `BNF` | `n_fixation` | N fixed today; keeps its last value before `bdBSG` on days without fixation, and past `bdTSG` | gN m⁻² | float |
 | `CUMBNF` | `n_fixation_cum` | Cumulative biological N fixation | gN m⁻² | float |
-| `NSTRS` | `n_stress` | N-stress factor on growth (1 = none) | — | float |
+| `potNUP` | `n_uptake_pot` | N demand before the caps | gN m⁻² | float |
+| `NSTRS` | `n_stress` | `NUP / potNUP` (1 = no N limitation, 0 on days without uptake); output only, no section reads it | — | float |
+| `NFC`, `DNF` | `n_fix_capacity`, `n_fix_day` | N fixation capacity per g `WVEG` (running mean); fixation available today | gN g⁻¹, gN m⁻² | float |
+| `INLF`,`INST`,`INGRN` | `n_to_leaf`,`n_to_stem`,`n_to_grain` | N flows into leaf, stem and grain today | gN m⁻² | float |
+| `XNLF`,`XNST` | `n_from_leaf`,`n_from_stem` | N flows out of leaf and stem today; `CropLAIN` turns `XNLF` into `DLAI` | gN m⁻² | float |
+| `TRLN`, `FXLF` | `n_transloc`, `n_transloc_leaf_frac` | Translocatable leaf + stem N, and its leaf share | gN m⁻², — | float |
 
 ## 19. Soil nitrogen — parameters
 

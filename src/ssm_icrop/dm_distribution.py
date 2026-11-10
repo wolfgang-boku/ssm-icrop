@@ -56,7 +56,6 @@ class DMDistributionParams:
     wdhi2: float
     wdhi3: float
     wdhi4: float
-    sncs: float               # stem N conc. at senescence (blocks SGR if N-exhausted)
     mc: float = 0.0           # grain moisture content (%) — for future SummaryPrintOut
     # heat/frost effect on flowering (Bindi et al.)
     heat: int = 0             # 0=off, 1=on
@@ -156,7 +155,11 @@ def step_dm_distribution(state: SimState, params: DMDistributionParams,
     elif state.cbd <= state.cbd_tsg:
         hi_demand = state.dhi * state.frhtdhi * (state.wtop + state.ddmp)
         sgr = hi_demand + state.ddmp * state.hi
-        if state.lai == 0.0 and state.nst <= (state.wst * params.sncs):
+        # NST and SNCS are PlantN's, as left by yesterday's call (PlantN runs
+        # after DMDistribution, iCrop.vba:83-84). With nitrogen = 0 both stay 0
+        # in the port, so the check reduces to LAI = 0; in a VBA macro run they
+        # keep the values an earlier nitrogen = 2 scenario left.
+        if state.lai == 0.0 and state.nst <= (state.wst * state.sncs):
             sgr = 0.0  # no N available for seed filling
         sgr = max(0.0, sgr)
 

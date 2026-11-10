@@ -21,6 +21,7 @@ from tests.test_verification import (
     TAJAN_DM_PRODUCTION,
     TAJAN_LAI,
     TAJAN_PHENOLOGY,
+    TAJAN_PLANT_N,
     TAJAN_SOIL_WATER,
 )
 
@@ -36,9 +37,6 @@ EXPECTED_DIVERGENCE = {
     # Python-side addition: an alternative RUE temperature response, not a
     # workbook value.
     "temp_response": "Python-only option, no sheet cell",
-    # PlantN owns this: SNCS is state-dependent in VBA (iCrop.vba:1433 picks
-    # SNCS1/SNCS2 by CBD), so there is no single Crop-sheet cell for it.
-    "sncs": "state-dependent in PlantN (SNCS1/SNCS2), not a static crop param",
     # Blank in the sheet for Tajan; the literal 30.0 in test_verification.py is an
     # arbitrary stand-in for an unused parameter. VBA reads a blank cell as 0.
     "tp2d": "blank in sheet for this cultivar; VBA reads blank as 0",
@@ -70,6 +68,7 @@ def tajan() -> dict:
         ("dm_production", TAJAN_DM_PRODUCTION),
         ("dm_distribution", TAJAN_DM_DISTRIBUTION),
         ("soil_water", TAJAN_SOIL_WATER),
+        ("plant_n", TAJAN_PLANT_N),
     ],
 )
 def test_extracted_matches_verified_literals(tajan, section, verified):
@@ -127,3 +126,5 @@ def test_crop_type_dispatch(tajan):
     assert soybean["crop_type"] == "LEGUME"
     assert "bd_emrr1" in soybean["phenology"]
     assert "bd_r7r8" in soybean["phenology"]
+    assert soybean["phenology"]["bd_bnf"] == 12.0  # row 104, iCrop.vba:600
+    assert "bd_bnf" not in tajan["phenology"]  # wheat hardcodes 999 (:280)

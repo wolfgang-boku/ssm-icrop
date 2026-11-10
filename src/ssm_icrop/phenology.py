@@ -84,6 +84,7 @@ class LegumeParams:
     bd_tlm: float                  # leaf production ends on main stem
     bd_tlp: float                  # leaf production ends on whole plant
     bd_bls: float                  # begin leaf senescence
+    bd_bnf: float                  # begin N fixation (Crop row 104, iCrop.vba:600)
 
 
 def _temperature_response_beta(tmp: float, tbd: float, tp1d: float,
@@ -264,6 +265,7 @@ def step_phenology_wheat(state: SimState, params: WheatParams, lat: float) -> No
         state.cbd_bls = state.cbd_bsg
         state.cbd_bxtf = state.cbd_ant - 5.0
         state.cbd_txtf = state.cbd_ant + 12.0
+        state.cbd_bnf = 999.0  # iCrop.vba:280, "no N fixation in the crop"
         state.cumver = 0.0
         state.wsfd = 1.0
         # iCrop.vba:283. This block runs after Weather on crop day 1, so snow
@@ -359,6 +361,7 @@ def step_phenology_maize(state: SimState, params: MaizeParams, lat: float) -> No
         state.cbd_bls = state.cbd_bsg
         state.cbd_bxtf = state.cbd_sil - 5.0
         state.cbd_txtf = state.cbd_sil + 10.0
+        state.cbd_bnf = 999.0  # iCrop.vba:437, "no N fixation"
         state.tuemrtsi = 0.0
         state.xtsi = 0
         state.wsfd = 1.0
@@ -458,6 +461,7 @@ def step_phenology_legume(state: SimState, params: LegumeParams, lat: float) -> 
         state.cbd_bls = params.bd_bls
         state.cbd_bxtf = state.cbd_r1 - 5.0
         state.cbd_txtf = state.cbd_r1 + 10.0
+        state.cbd_bnf = params.bd_bnf  # iCrop.vba:600
         state.wsfd = 1.0
         # iCrop.vba:603; FTSW(1) as for wheat (:283), but SNOW is not reset
         state.cbd = 0.0

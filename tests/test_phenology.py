@@ -372,7 +372,7 @@ class TestLegumePhenology:
             bd_sowemr=3.0, bd_emrr1=8.0, bd_r1r3=12.0,
             bd_r3r5=15.0, bd_r5r7=10.0, bd_r7r8=8.0,
             bd_brp=3.0, bd_trp=11.0, bd_bsg=30.0, bd_tsg=45.0,
-            bd_tlm=25.0, bd_tlp=30.0, bd_bls=30.0,
+            bd_tlm=25.0, bd_tlp=30.0, bd_bls=30.0, bd_bnf=12.0,
         )
         state = SimState()
         state.tmp = 20.0
@@ -403,7 +403,7 @@ class TestLegumePhenology:
             bd_sowemr=3.0, bd_emrr1=8.0, bd_r1r3=12.0,
             bd_r3r5=15.0, bd_r5r7=10.0, bd_r7r8=8.0,
             bd_brp=3.0, bd_trp=11.0, bd_bsg=30.0, bd_tsg=45.0,
-            bd_tlm=25.0, bd_tlp=30.0, bd_bls=30.0,
+            bd_tlm=25.0, bd_tlp=30.0, bd_bls=30.0, bd_bnf=12.0,
         )
         state = SimState()
         state.tmp = 20.0
@@ -436,7 +436,7 @@ class TestInitialisationResets:
         tbd=5.0, tp1d=20.0, tp2d=25.0, tcd=35.0, cpp=12.5, ppsen=0.0,
         bd_sowemr=3.0, bd_emrr1=8.0, bd_r1r3=12.0, bd_r3r5=15.0, bd_r5r7=10.0,
         bd_r7r8=8.0, bd_brp=3.0, bd_trp=11.0, bd_bsg=30.0, bd_tsg=45.0,
-        bd_tlm=25.0, bd_tlp=30.0, bd_bls=30.0,
+        bd_tlm=25.0, bd_tlp=30.0, bd_bls=30.0, bd_bnf=12.0,
     )
 
     def _day_one(self, params, crop_type):

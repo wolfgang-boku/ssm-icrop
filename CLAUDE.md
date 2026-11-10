@@ -71,9 +71,9 @@ CropLAI|CropLAIN → DMProduction → DMDistribution → [PlantN] →
   same macro run left `NLYER` set.
 - Note: `SoilN`'s mineralization rate depends on each layer's `FTSW` (`iCrop.vba:1632-1633`):
   it rises to its maximum at `FTSW = 0.9` and falls to 0 at field capacity (`FTSW = 1`).
-  Whether `water=1` gives a genuinely "N-limited, water-unlimited" scenario is open until
-  PlantN is ported: it refills the root zone to exactly field capacity, where
-  mineralization is 0.
+  `water=1` removes water stress but not this effect: in the reference scenario
+  `Taj1-Nlim` the root zone stays at or above field capacity, and the season
+  mineralizes less than half the N of `Taj1 Arab` (`docs/verification.md`).
 
 ## Key State Variables
 - `CBD` — cumulative biological days (drives phenology stage transitions)
@@ -97,19 +97,23 @@ weather, phenology (except the ENVIRONMENTAL tail), crop_lai, dm_production,
 dm_distribution, soil_water, sowing (FixFind=0 only, including the pre-sowing
 spin-up that runs SoilWater with DAP=0).
 
-soil_n is ported and verified up to emergence only: the eight pre-sowing days
-and DAP 1–8 of the two `nitrogen=2` scenarios (12 soil N columns, plus water
-and crop columns). From emergence on those scenarios need PlantN and CropLAIN.
+soil_n and plant_n are ported. The two `nitrogen=2` scenarios are verified
+over the whole season, but with LAI, GLAI, DLAI and MSNN taken from the
+reference output, because CropLAIN is not ported yet; up to emergence (DAP 1–8)
+they are verified without that stand-in. This covers PlantN, SoilN and
+SoilWater with in-season irrigation (water 1, and water 3 with WATiT=1), given
+VBA's canopy. `nitrogen=2` still raises in `run_simulation` until CropLAIN is
+ported.
 
 "Verified" covers only the code paths the reference scenarios run: wheat only,
 one soil, one season, no snow, and no climate-change adjustments (`tchng`,
-`pchng`). Maize and legume phenology, irrigation during the
-season (water 1 and 3), runoff from a deep top layer, deep-layer evaporation,
+`pchng`). Maize and legume phenology, legume N fixation, scheduled irrigation with
+WATiT 2–4, runoff from a deep top layer, deep-layer evaporation,
 drought survival and the flood kill are unit-tested only.
 `docs/verification.md` lists per process what the reference output checks and
 what it does not.
 
-Still stubs: `plant_n.py`, CropLAIN,
+Still stubs: CropLAIN,
 FindSimSowDate algorithms 1–5, and the `record_daily`/`record_summary` writers.
 Use the `/port-section` skill — it holds the section line ranges and the workflow.
 

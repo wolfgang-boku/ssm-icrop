@@ -37,8 +37,6 @@ INERT_DIFFERENCES = {
     # Blank Crop-sheet cell -> 0.0; wheat's beta temperature response never
     # reads tp2d (see phenology._temperature_response_beta).
     "tp2d": (30.0, 0.0),
-    # SNCS belongs to PlantN and is inert while nitrogen=0 (iCrop.vba:1066).
-    "sncs": (0.0063, 0.0),
 }
 
 
