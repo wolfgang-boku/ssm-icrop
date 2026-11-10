@@ -1,12 +1,8 @@
 # "Taj1 Arab" exactly as configured in the 2022 source workbook's Run sheet:
 # scheduled irrigation (water=3) plus a full N balance (nitrogen=2).
 #
-# NOT RUNNABLE YET with run_simulation -- nitrogen=2 needs CropLAIN, which is
-# not ported. tests/test_verification.py runs it up to emergence, and over the
-# whole season with the canopy taken from the reference output. This file
-# exists so the management block is transcribed once,
-# from the sheet, instead of being invented later. The runnable variants are
-# gorgan_wheat_potential.yaml and gorgan_wheat_waterlim.yaml.
+# tests/test_verification.py runs it, and with water=1 and irg_level=.inf the
+# "Taj1-Nlim" scenario of the verification workbook (see docs/verification.md).
 #
 # Source: Manag sheet rows 17-32 (MangRowNo=13), Location row 7, Soil rows 28-35.
 

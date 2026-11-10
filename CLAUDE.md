@@ -53,7 +53,7 @@ CropLAI|CropLAIN → DMProduction → DMDistribution → [PlantN] →
 | `Weather` | Reads one day: Year, DOY, SRAD, TMAX, TMIN, RAIN (columns 1–6 of weather sheet); applies the climate-change adjustments (`tchng` added to temperatures, `pchng` multiplying rain); handles snow accumulation/melt |
 | `PhenologyBD` | Computes biological days (`CBD`); separate logic for WHEAT (vernalization + photoperiod), MAIZE, and LEGUME; advances through growth stages R0–R8/MAT |
 | `CropLAI` | LAI dynamics without N stress: emergence, expansion, senescence, frost/heat effects |
-| `CropLAIN` | Same as `CropLAI` but with N-stress factor applied |
+| `CropLAIN` | `CropLAI` with leaf area tied to PlantN's leaf N: growth capped by `INLF / SLNG`, senescence `DLAI = XNLF / (SLNG − SLNS)` |
 | `DMProduction` | RUE-based biomass: temperature response on RUE, VPD response (hourly or daily), CO₂ effect, water-stress factor `WSFG` |
 | `DMDistribution` | Partitions daily DM to seed/leaf/stem; yield formation; heat and frost effects on DHI |
 | `PlantN` | Plant N uptake, allocation to organs, biological N fixation for legumes |
@@ -90,20 +90,14 @@ Scenario/location/management/soil/crop identifiers, then: DOY, DAP, TMP, DTU, CB
 
 ## Port Status
 
-Ported and verified against the reference output (18 weather and crop columns
-for potential production; those 18 plus 16 water columns for the rainfed
-scenario):
-weather, phenology (except the ENVIRONMENTAL tail), crop_lai, dm_production,
-dm_distribution, soil_water, sowing (FixFind=0 only, including the pre-sowing
-spin-up that runs SoilWater with DAP=0).
-
-soil_n and plant_n are ported. The two `nitrogen=2` scenarios are verified
-over the whole season, but with LAI, GLAI, DLAI and MSNN taken from the
-reference output, because CropLAIN is not ported yet; up to emergence (DAP 1–8)
-they are verified without that stand-in. This covers PlantN, SoilN and
-SoilWater with in-season irrigation (water 1, and water 3 with WATiT=1), given
-VBA's canopy. `nitrogen=2` still raises in `run_simulation` until CropLAIN is
-ported.
+Ported and verified against the reference output, all four reference
+scenarios over the whole season (18 weather and crop columns for potential
+production; plus 16 water columns for the rainfed scenario; plus 12 soil N and
+8 plant N columns for the two `nitrogen=2` scenarios):
+weather, phenology (except the ENVIRONMENTAL tail), crop_lai (CropLAI and
+CropLAIN), dm_production, dm_distribution, soil_water (rainfed, water 1, and
+water 3 with WATiT=1), plant_n, soil_n, sowing (FixFind=0 only, including the
+pre-sowing spin-up that runs SoilWater with DAP=0).
 
 "Verified" covers only the code paths the reference scenarios run: wheat only,
 one soil, one season, no snow, and no climate-change adjustments (`tchng`,
@@ -113,8 +107,7 @@ drought survival and the flood kill are unit-tested only.
 `docs/verification.md` lists per process what the reference output checks and
 what it does not.
 
-Still stubs: CropLAIN,
-FindSimSowDate algorithms 1–5, and the `record_daily`/`record_summary` writers.
+Still stubs: FindSimSowDate algorithms 1–5, and the `record_daily`/`record_summary` writers.
 Use the `/port-section` skill — it holds the section line ranges and the workflow.
 
 **Known gap:** `PhenologyBD`'s ENVIRONMENTAL block (`iCrop.vba:678-710`) is not

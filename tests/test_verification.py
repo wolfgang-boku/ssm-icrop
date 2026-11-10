@@ -12,13 +12,9 @@ Wheat cultivar "Tajan" (Crop sheet column D) at Gorgan, sown DOY 348 2005
 - "Taj1-Potential" (water=0, nitrogen=0), from hand-transcribed literals;
 - "Taj1-WaterLim" (water=2, rainfed), from configs/example/gorgan_wheat_waterlim.yaml.
 
-The N-limited ("Taj1-Nlim") and full-model ("Taj1 Arab") scenarios in the same
-file need CropLAIN, which is not ported yet. They are compared twice: up to
-emergence (spin-up days and DAP 1-8), where LAI = 0 and CropLAI gives what
-CropLAIN would; and over the whole season with LAI, GLAI, DLAI and MSNN taken
-from the reference output, which verifies PlantN, SoilN and SoilWater with
-in-season irrigation given VBA's canopy. Once CropLAIN is ported, the full
-season runs without that stand-in.
+The N-limited ("Taj1-Nlim") and full-model ("Taj1 Arab") scenarios run from
+configs/example/gorgan_wheat_taj1.yaml over the whole season, and separately
+up to emergence at a tighter tolerance.
 
 Spin-up rows (DAP=0, the days up to sowing) carry only the soil water balance.
 Their crop columns are not compared: the reference run computed all four
@@ -32,7 +28,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from ssm_icrop import model
 from ssm_icrop.crop_lai import LAIParams
 from ssm_icrop.dm_distribution import DMDistributionParams
 from ssm_icrop.dm_production import DMProductionParams
@@ -121,8 +116,8 @@ VBA_TO_PY = {
 # could let a small consequential error through.
 ATOL = 1e-6
 
-# Up to emergence the nitrogen=2 scenarios need neither PlantN nor CropLAIN,
-# and they match the reference to within 1e-14 (Taj1 Arab: 0.0) with the soil
+# Up to emergence (LAI = 0, NUP = 0) the nitrogen=2 scenarios match the
+# reference to within 1e-14 (Taj1 Arab: 0.0) with the soil
 # doubles from configs/soils/. 1e-12 keeps room for platform differences in
 # exp/log, which SoilN's mineralization uses, and catches what 1e-6 would not.
 PRE_EMERGENCE_ATOL = 1e-12
@@ -264,12 +259,11 @@ def test_irrigated_nitrogen_scenarios_up_to_emergence(scenario, water, irg_level
     """The two nitrogen=2 scenarios, from the first spin-up day to DAP 8.
 
     The crop emerges on DAP 9; until then LAI = 0 and PlantN takes up nothing
-    (NUP = 0, iCrop.vba:1435-1436), so CropLAI, which the port runs in place
-    of the unported CropLAIN, gives the same rows. Compared at the tighter
-    PRE_EMERGENCE_ATOL. They cover the first top-dressing on the sowing day
-    (DOY 348), the reset of the season sums at DAP 1 (:1620-1624) and, in
-    Taj1-Nlim, its daily irrigation and the denitrification in layer 1 that
-    follows from it.
+    (NUP = 0, iCrop.vba:1435-1436). These rows match more closely than the
+    rest of the season and are compared at the tighter PRE_EMERGENCE_ATOL.
+    They cover the first top-dressing on the sowing day (DOY 348), the reset
+    of the season sums at DAP 1 (:1620-1624) and, in Taj1-Nlim, its daily
+    irrigation and the denitrification in layer 1 that follows from it.
 
     Water and soil N columns are compared on every row; crop columns from
     DAP 1 only, because the spin-up rows of a VBA macro run show the previous
@@ -293,7 +287,7 @@ def test_irrigated_nitrogen_scenarios_up_to_emergence(scenario, water, irg_level
     assert list(py_daily["dap"]) == list(vba_daily["DAP"]) == [0] * 8 + list(range(1, 9))
     assert vba_daily["nfert"].iloc[7] == 2.3
     crop = vba_daily["DAP"] > 0
-    # the premise: nothing PlantN or CropLAIN would change has happened yet
+    # the premise: no leaf area and no uptake yet
     assert (vba_daily.loc[crop, "lai"] == 0).all() and (vba_daily.loc[crop, "NUP"] == 0).all()
     for col in [*VBA_WATER_TO_PY.values(), *VBA_SOIL_N_TO_PY.values()]:
         _assert_matches(
@@ -312,94 +306,60 @@ VBA_PLANT_N_TO_PY = {
     "CNUP": "cnup", "CUMBNF": "cumbnf", "NSTRS": "nstrs",
 }
 
-# CropLAIN's outputs, taken from the reference output in the full-season test
-FORCED_CANOPY = ("lai", "glai", "dlai", "msnn")
-
-
-def _canopy_from_reference(vba_crop_days: pd.DataFrame):
-    """A stand-in for CropLAIN that sets the canopy VBA computed that day.
-
-    Sets what CropLAIN (iCrop.vba:796-872) writes and later sections read:
-    LAI, GLAI, DLAI and MSNN from the reference row of today's DAP, and
-    BLSLAI, which SoilWater reads after bdBSG (as ETLAI) and CropLAIN latches
-    at :838 while bdTLM < CBD <= bdTLP. Its premature-maturity rule (:819-822)
-    is not reproduced; test_same_days catches a season it would end early.
-    """
-    by_dap = vba_crop_days.set_index("DAP")
-
-    def step(state, params, pden):
-        row = by_dap.loc[state.dap]
-        for name in FORCED_CANOPY:
-            setattr(state, name, row[name])
-        if state.cbd_tlm < state.cbd <= state.cbd_tlp:
-            state.blslai = state.lai
-
-    return step
-
-
 @pytest.fixture(
     scope="module",
     params=[("Taj1 Arab", 3, 0.5), ("Taj1-Nlim", 1, float("inf"))],  # see docs/verification.md
     ids=["Taj1 Arab", "Taj1-Nlim"],
 )
-def nitrogen_run_given_canopy(request) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """A nitrogen=2 scenario over the whole season, with VBA's canopy."""
+def nitrogen_run(request) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """A nitrogen=2 scenario over the whole season, from its config."""
     scenario, water, irg_level = request.param
+    config = load_scenario(REPO_ROOT / "configs" / "example" / "gorgan_wheat_taj1.yaml")
+    config.management.water, config.management.irg_level = water, irg_level
+    py_daily = run_simulation(config).daily
     vba_daily = _load_vba_all_days(scenario).rename(
         columns={**VBA_SOIL_N_TO_PY, **VBA_PLANT_N_TO_PY}
     )
-    config = load_scenario(REPO_ROOT / "configs" / "example" / "gorgan_wheat_taj1.yaml")
-    mgmt = config.management
-    mgmt.water, mgmt.irg_level = water, irg_level
-    params = build_params(load_crop_params(config.crop_file), config.location)
-    with pytest.MonkeyPatch.context() as mp:
-        mp.setattr(model, "step_lai", _canopy_from_reference(vba_daily[vba_daily["DAP"] > 0]))
-        records, _ = _run_season(
-            weather_df=load_weather(config.location.weather_file),
-            params=params, lat=config.location.latitude,
-            pyear=mgmt.plant_year, simdoy=mgmt.sim_doy, pdoy=mgmt.pdoy,
-            pden=mgmt.plant_density, water=water, nitrogen=2,
-            soil_water=_soil_water_inputs(params, config.soil, mgmt),
-        )
-    return pd.DataFrame(records), vba_daily
+    return py_daily, vba_daily
 
 
-class TestNitrogenScenariosGivenCanopy:
-    """PlantN over the whole season of both nitrogen=2 scenarios.
+class TestNitrogenScenariosAgainstVBA:
+    """The full model: both nitrogen=2 scenarios over the whole season.
 
-    Every column except the four forced ones is computed by the port and
-    compared on every row; crop and plant N columns from DAP 1, because the
-    spin-up rows show the previous scenario's values. The port matches the
-    reference to about 4e-9 (DEPORT), as in the rainfed scenario.
+    Water and soil N columns are compared on every row, crop and plant N
+    columns from DAP 1, because the spin-up rows show the previous scenario's
+    values. The port matches the reference to about 4e-9 (DEPORT), as in the
+    rainfed scenario.
     """
 
-    def test_same_days(self, nitrogen_run_given_canopy):
-        py_daily, vba_daily = nitrogen_run_given_canopy
+    def test_same_days(self, nitrogen_run):
+        py_daily, vba_daily = nitrogen_run
         assert len(py_daily) == len(vba_daily) == 185
         assert list(py_daily["doy"]) == list(vba_daily["DOY"])
         assert list(py_daily["dap"]) == list(vba_daily["DAP"])
 
     @pytest.mark.parametrize("col", [*VBA_WATER_TO_PY.values(), *VBA_SOIL_N_TO_PY.values()])
-    def test_soil_column_matches_vba_every_day(self, nitrogen_run_given_canopy, col):
-        py_daily, vba_daily = nitrogen_run_given_canopy
+    def test_soil_column_matches_vba_every_day(self, nitrogen_run, col):
+        py_daily, vba_daily = nitrogen_run
         _assert_matches(py_daily[col], vba_daily[col], vba_daily["DAP"], ATOL)
 
     @pytest.mark.parametrize(
-        "col",
-        [c for c in VBA_TO_PY.values() if c not in FORCED_CANOPY]
-        + list(VBA_PLANT_N_TO_PY.values()),
+        "col", [*VBA_TO_PY.values(), *VBA_PLANT_N_TO_PY.values()]
     )
-    def test_crop_column_matches_vba(self, nitrogen_run_given_canopy, col):
-        py_daily, vba_daily = nitrogen_run_given_canopy
+    def test_crop_column_matches_vba(self, nitrogen_run, col):
+        py_daily, vba_daily = nitrogen_run
         crop = vba_daily["DAP"] > 0
         _assert_matches(
             py_daily.loc[crop, col], vba_daily.loc[crop, col], vba_daily["DAP"], ATOL
         )
 
-    def test_scenarios_exercise_plant_n(self, nitrogen_run_given_canopy):
-        """Guard against a vacuous match: uptake, N stress and grain N occur."""
-        _, vba_daily = nitrogen_run_given_canopy
-        crop = vba_daily[vba_daily["DAP"] > 0]
+    def test_scenarios_exercise_n_limitation(self, nitrogen_run):
+        """Guard against a vacuous match: uptake, N stress and grain N occur,
+        and N limits leaf area, so the canopy differs from the potential one."""
+        _, vba_daily = nitrogen_run
+        crop = vba_daily[vba_daily["DAP"] > 0].set_index("DAP")
         assert crop["nup"].max() > 0.1
         assert crop["nstrs"].between(0.001, 0.9).any()
         assert crop["ngrn"].iloc[-1] > 9.0
+        potential = _load_vba_reference("Taj1-Potential")
+        assert (potential["lai"] - crop["lai"]).abs().max() > 0.5

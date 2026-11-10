@@ -179,8 +179,7 @@ compared as 0.
 **`Taj1 Arab`** (`water = 3`) and **`Taj1-Nlim`** (`water = 1`) run from
 `configs/example/gorgan_wheat_taj1.yaml`. Two stretches are compared: the
 eight days before sowing, and the first eight crop days (DAP 1–8), which end
-the day before emergence. Until emergence `LAI = 0` and `NUP = 0` in the
-reference output, so `PlantN` and `CropLAIN` change nothing yet. All 16 days
+the day before emergence; until then `LAI = 0` and `NUP = 0`. All 16 days
 are compared in the 16 water columns and the 12 `SoilN` columns
 
 `NFERT CNFERT NVOL CNVOL NLEACH CNLEACH NMIN CNMIN NDNIT CNDNIT SNAVL NSOL`
@@ -192,19 +191,19 @@ The tighter tolerance leaves room only for platform differences in `exp` and
 `log`. (`NMIN`, `NDNIT`
 and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.)
 
-From emergence (DAP 9) on, both scenarios need `CropLAIN`, which is not ported
-yet. Over the whole season they are compared with a stand-in for it that sets
-`LAI`, `GLAI`, `DLAI` and `MSNN` to the reference output's values of the day,
-and `BLSLAI` as `CropLAIN` latches it (`iCrop.vba:838`). Everything else is
-computed by the port: phenology, dry matter, `PlantN`, `SoilWater` with its
-in-season irrigation, and `SoilN`. All 185 rows are compared in the 16 water
-and 12 soil N columns, and DAP 1–177 in the remaining 14 crop columns and the
+Over the whole season, both scenarios are compared in all 185 rows in the 16
+water and 12 soil N columns, and on DAP 1–177 in the 18 crop columns and the
 8 `PlantN` columns
 
 `NUP NLF NST NVEG NGRN CNUP CUMBNF NSTRS`
 
-with the tolerance of 1e-6; the port matches to about 4e-9 (`DEPORT`). This
-verifies `PlantN` given VBA's canopy, not `CropLAIN`.
+with the tolerance of 1e-6; the port matches to about 4e-9 (`DEPORT`). Leaf
+area comes from `CropLAIN` here, and N limits it: `LAI` differs from
+`Taj1-Potential` by up to 1.5 (`Taj1 Arab`) and 2.2 (`Taj1-Nlim`).
+
+`CBD` differs from the reference output by up to 1.2e-10 from emergence on,
+in all four scenarios alike, including `Taj1-Potential`. It is floating-point
+rounding in phenology, not an effect of the water or N balance.
 
 `tests/test_crop_params_extraction.py` additionally checks that the crop
 parameters read from the 2022 source workbook by `scripts/extract_crop_params.py`
@@ -273,8 +272,7 @@ no cultivar uses it.
 | Stress factors `WSFL`, `WSFG`, `WSFD` and their effect on the crop | 1400-1403 | |
 | Waterlogging day count (`FLDUR`) | 1404-1407 | the kill itself is not reached |
 
-**Checked against the reference output, every day, with the canopy taken from
-it (`Taj1 Arab`, `Taj1-Nlim`, see above):**
+**Checked against the reference output, every day (`Taj1 Arab`, `Taj1-Nlim`):**
 
 | Process | VBA lines | Note |
 |---|---|---|
@@ -298,9 +296,7 @@ it (`Taj1 Arab`, `Taj1-Nlim`, see above):**
 
 ### `SoilN` (`soil_n.py`, `iCrop.vba:1575-1766`)
 
-**Checked against the reference output (`Taj1 Arab`, `Taj1-Nlim`): up to
-emergence on their own, over the whole season with the canopy taken from the
-reference output (see above):**
+**Checked against the reference output, every day (`Taj1 Arab`, `Taj1-Nlim`):**
 
 | Process | VBA lines | Note |
 |---|---|---|
@@ -342,8 +338,7 @@ season stopped before `bdTSG`.
 
 ### `PlantN` (`plant_n.py`, `iCrop.vba:1416-1569`)
 
-**Checked against the reference output, with the canopy taken from it
-(`Taj1 Arab`, `Taj1-Nlim`, DAP 1–177):**
+**Checked against the reference output (`Taj1 Arab`, `Taj1-Nlim`, DAP 1–177):**
 
 | Process | VBA lines | Note |
 |---|---|---|
@@ -370,8 +365,30 @@ season stopped before `bdTSG`.
 | `FXLF` limited to 0 … 1 | 1567-1568 | |
 | `NFC` carried from one season into the next | 1444 | the reference output has one season |
 
-**Not tested at all:** `PlantN` with the port's own canopy, until `CropLAIN`
-is ported.
+**Not tested at all:** maize and legume crops.
+
+### `CropLAIN` (`crop_lai.step_lai_n`, `iCrop.vba:796-872`)
+
+**Checked against the reference output (`Taj1 Arab`, `Taj1-Nlim`, DAP 1–177):**
+
+| Process | VBA lines | Note |
+|---|---|---|
+| Initialisation, including `SLNG = 2` on the first day | 798-814 | `XNLF = 0` that day, so the 2 has no effect |
+| Yesterday's `GLAI` capped by `INLF / SLNG` | 817 | |
+| Leaf area growth on the main stem and from `GLF` | 827-840 | |
+| `BLSLAI` latched while `bdTLM < CBD <= bdTLP` | 838 | read as `ETLAI` after `bdBSG` by `SoilWater` and, through the canopy temperature, by the next day's `DMDistribution` |
+| Senescence from leaf N, `DLAI = XNLF / (SLNG − SLNS)` | 842 | |
+| Heat damage | 862-869 | |
+
+**Unit tests only, never checked against the reference output:**
+
+| Process | VBA lines | Why not covered |
+|---|---|---|
+| Premature maturity at `LAI < 0.05` | 819-822 | during seed growth `LAI` stays above 0.18 |
+| Frost damage | 853-860 | `TMIN` never below `FRZTKIL = −5` °C |
+| `R5ANTLAI` for wheat, maize and legumes | 844-850 | nothing in the VBA reads it; `DailyPrintOut` sets it again (2007-2015) |
+| `MXLAI` | 824 | summary output only |
+| `SLNG = 2` with a nonzero `XNLF` on the first day | 812, 842 | the port starts every season with `XNLF = 0`; VBA can carry a nonzero one only from a season that ended before `bdTSG` |
 
 ## Running it
 
@@ -382,10 +399,11 @@ python scripts/compare_verification.py      # table: mismatches and max |diff| p
 
 ## Extending it
 
-When `CropLAIN` is ported, run `Taj1 Arab` and `Taj1-Nlim` over the whole
-season without the canopy stand-in, following the `Taj1-WaterLim` class.
+The reference output covers one crop and one season. Other crops, soils,
+sowing algorithms and multi-season runs need further reference runs; add each
+as its own scenario class in `tests/test_verification.py`.
 
-Two points to resolve before relying on those scenarios:
+A point to keep in mind about the reference scenarios:
 
 - **`IRGLVL` in `Taj1-Nlim` is stored as text.** Manag cell G89 holds the
   string `'0.9'`, not the number 0.9. `IRGLVL` is an undeclared Variant
@@ -396,5 +414,5 @@ Two points to resolve before relying on those scenarios:
   TTSWRZ − ATSWRZ. Because `water = 1` refills to DUL without a lower bound
   (`soil_water._auto_irrigation_amount`), the amount turns negative above DUL
   and `CIRGW` ends at −196 mm. A Python config reproduces this with
-  `irg_level: .inf`; on DAP 1–8 the port's `IRGW` matches the reference
-  output with it.
+  `irg_level: .inf`; with it the port's `IRGW` matches the reference output
+  on every day.

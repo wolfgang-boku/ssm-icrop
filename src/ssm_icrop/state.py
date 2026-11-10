@@ -32,7 +32,7 @@ class SimState:
     msnn: float = 0.0      # main stem node number
 
     mxlai: float = 0.0     # season maximum LAI
-    blslai: float = 0.0    # LAI saved at begin leaf senescence
+    blslai: float = 0.0    # LAI latched up to bdBLS (CropLAI) or in bdTLM..bdTLP (CropLAIN)
     etlai: float = 0.0     # LAI used for soil-evaporation calc
     r5antlai: float = 0.0  # LAI at anthesis (R5)
     pla1: float = 0.0      # plant leaf area, previous day (cm2 plant-1)

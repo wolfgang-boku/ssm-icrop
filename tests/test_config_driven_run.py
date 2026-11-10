@@ -122,13 +122,6 @@ def test_config_run_matches_literal_run(scenario):
         )
 
 
-def test_unported_modes_fail_loudly():
-    """nitrogen=2 must raise, not silently skip a process."""
-    taj1 = load_scenario(REPO_ROOT / "configs" / "example" / "gorgan_wheat_taj1.yaml")
-    with pytest.raises(NotImplementedError, match="nitrogen=2"):
-        run_simulation(taj1)
-
-
 def test_location_climate_adjustments_reach_every_day():
     """tchng is added to TMAX/TMIN and pchng multiplies RAIN, on crop days
     (iCrop.vba:190-192) and on the days before sowing (:1786-1788).

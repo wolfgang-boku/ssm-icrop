@@ -18,16 +18,16 @@ Before the crop loop, the pre-sowing days of FindSimSowDate run SoilWater
 (and SoilN) with DAP=0 and are recorded like crop days (iCrop.vba:1779-1797).
 
 `run_potential_production` is a thin preset over that pipeline for water=0 /
-nitrogen=0, not a separate model. Modes whose modules are still stubs raise
-NotImplementedError rather than silently skipping a process -- a skipped water
-balance would produce plausible-looking but wrong numbers.
+nitrogen=0, not a separate model. FixFind 1-5 raise NotImplementedError.
+StopDoy (forced removal, MATYP 4) is not ported either and is ignored: a
+scenario whose StopDoy falls inside the season runs on to maturity.
 """
 
 from dataclasses import dataclass
 
 import pandas as pd
 
-from .crop_lai import LAIParams, step_lai
+from .crop_lai import LAIParams, step_lai, step_lai_n
 from .dm_distribution import DMDistributionParams, step_dm_distribution
 from .dm_production import DMProductionParams, step_dm_production
 from .inputs import (
@@ -147,14 +147,6 @@ def build_params(crop: dict, location: LocationConfig) -> ModelParams:
     )
 
 
-def _check_modes_supported(water: int, nitrogen: int) -> None:
-    """Fail loudly on modes whose modules are not ported yet."""
-    if nitrogen == 2:
-        raise NotImplementedError(
-            "nitrogen=2 needs CropLAIN, which is not ported yet"
-        )
-
-
 @dataclass
 class _SoilWaterInputs:
     """What SoilWater needs beyond the crop parameters; None when water=0."""
@@ -206,8 +198,10 @@ def _step_day(
     step_weather(state, weather_df, row_idx, temp_change, precip_change)
     step_phenology(state, params.phenology, params.crop_type, lat)
 
-    # if nitrogen = 0 Then GoSub CropLAI / if nitrogen = 2 Then GoSub CropLAIN
-    step_lai(state, params.lai, pden)
+    if nitrogen == 2:  # iCrop.vba:80-81
+        step_lai_n(state, params.lai, _plant_n_params(params), pden, params.crop_type)
+    else:
+        step_lai(state, params.lai, pden)
 
     step_dm_production(state, params.dm_production)
     step_dm_distribution(state, params.dm_distribution, water_mode=water)
@@ -222,13 +216,17 @@ def _step_day(
         _step_soil_n(state, soil_water)
 
 
-def _step_plant_n(state: SimState, params: ModelParams) -> None:
+def _plant_n_params(params: ModelParams) -> PlantNParams:
     if params.plant_n is None:
         raise ValueError(
             "nitrogen=2 needs a `plant_n` section in the crop file; "
             "regenerate it with scripts/extract_crop_params.py"
         )
-    step_plant_n(state, params.plant_n, params.dm_distribution.gcc)
+    return params.plant_n
+
+
+def _step_plant_n(state: SimState, params: ModelParams) -> None:
+    step_plant_n(state, _plant_n_params(params), params.dm_distribution.gcc)
 
 
 def _step_soil_n(state: SimState, inputs: _SoilWaterInputs | None) -> None:
@@ -372,7 +370,6 @@ def run_simulation(config: ScenarioConfig, max_days: int = 400) -> SimResult:
     environmental sums of iCrop.vba:678-710) is not accumulated yet either.
     """
     mgmt: ManagementConfig = config.management
-    _check_modes_supported(mgmt.water, mgmt.nitrogen)
 
     params = build_params(load_crop_params(config.crop_file), config.location)
     weather_df = load_weather(config.location.weather_file)

@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- SoilN, the soil nitrogen balance, and PlantN, plant N uptake and
-  distribution. Both `nitrogen = 2` reference scenarios match the reference
-  output over the whole season when the canopy (LAI, GLAI, DLAI, MSNN) is
-  taken from it. `nitrogen = 2` still raises until CropLAIN is ported.
+- The nitrogen balance: SoilN (soil N), PlantN (plant N uptake and
+  distribution) and CropLAIN (leaf area limited by leaf N). `nitrogen = 2`
+  scenarios now run, and both reference scenarios match the reference output
+  over the whole season.
 - Crop files carry a `plant_n` section (Crop rows 61-68) and, for legumes,
   `bd_bnf` (row 104).
 - Soil parameter extraction from the 2022 source workbook

@@ -19,12 +19,12 @@ Read the whole section before writing anything. Section boundaries:
 | `Weather` | 182-217 | done |
 | `PhenologyBD` | 218-712 | done except the ENVIRONMENTAL tail (678-710) |
 | `CropLAI` | 718-795 | done |
-| `CropLAIN` | 796-872 | **stub** (tests force its outputs from the reference output) |
+| `CropLAIN` | 796-872 | done |
 | `DMProduction` | 878-976 | done |
 | `DMDistribution` | 977-1114 | done |
-| `SoilWater` | 1115-1415 | done (verified rainfed; irrigated given VBA's canopy) |
-| `PlantN` | 1416-1569 | done (verified given VBA's canopy) |
-| `SoilN` | 1575-1766 | done (verified given VBA's canopy) |
+| `SoilWater` | 1115-1415 | done (verified rainfed, water 1, water 3 with WATiT=1) |
+| `PlantN` | 1416-1569 | done (verified for wheat) |
+| `SoilN` | 1575-1766 | done (verified for NATiT=3) |
 | `FindSimSowDate` | 1767-2002 | done for FixFind=0 only, incl. spin-up |
 | `DailyPrintOut` | 2003-2098 | schema done (outputs.py), writer stub |
 | `SummaryPrintOut` | 2102-2486 | schema done, writer stub |
