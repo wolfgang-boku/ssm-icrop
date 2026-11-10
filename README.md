@@ -18,11 +18,11 @@ recorded output of the original program that the port has to reproduce.
 
 ## The original model
 
-SSM-iCrop is developed by Afshin Soltani and builds on the SSM crop modelling
-approach described in:
+SSM-iCrop is developed by Afshin Soltani. The SSM model is described in:
 
-> Soltani, A. & Sinclair, T. R. (2012). *Modeling Physiology of Crop Development,
-> Growth and Yield.* CABI, Wallingford.
+> Soltani, A., Maddah, V. & Sinclair, T. R. (2013). SSM-Wheat: a simulation
+> model for wheat development, growth and yield. *International Journal of
+> Plant Production* 7, 711–740.
 
 The model, its user manuals (wheat, chickpea) and the example weather data are
 available from the **[SSM crop models site](https://sites.google.com/view/ssm-crop-models/home)**.
@@ -166,9 +166,10 @@ Branching, commit messages and pull requests follow
 
 ## Citation
 
-If you use this port, please cite the original model and the SSM approach as
-well as the port itself. [CITATION.cff](CITATION.cff) lists them all;
-GitHub's "Cite this repository" button formats them. Changes between releases
+If you use this port, please cite the SSM-Wheat paper (Soltani et al., 2013,
+see [The original model](#the-original-model)) as well as the port itself.
+[CITATION.cff](CITATION.cff) lists these and further references; GitHub's
+"Cite this repository" button formats them. Changes between releases
 are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
