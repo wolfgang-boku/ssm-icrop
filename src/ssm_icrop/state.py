@@ -104,6 +104,7 @@ class SimState:
     vpd: float = 0.0       # daily VPD (kPa), only computed when vpd_type = 0
     # per-layer, 1-based in the VBA, index L-1 here
     flout: list[float] = field(default_factory=lambda: [0.0] * 10)  # drainage out (mm)
+    rlyer: list[float] = field(default_factory=lambda: [0.0] * 10)  # root length in layer (mm)
     rt: list[float] = field(default_factory=lambda: [0.0] * 10)     # uptake factor
     iatsw: list[float] = field(default_factory=lambda: [0.0] * 10)  # ATSW at DAP 1 (mm)
     iftsw: list[float] = field(default_factory=lambda: [0.0] * 10)  # FTSW at DAP 1
@@ -134,7 +135,10 @@ class SimState:
     cdrain0: float = 0.0
 
     # --- plant N (g m-2)
-    nup: float = 0.0       # N taken up today (daily)
+    nup: float = 0.0       # N taken up today (daily); not reset by LocManagInputs,
+    #                        so SoilN reads the last season's value before sowing
+    bnf: float = 0.0       # biological N fixation (g N m-2), set by PlantN in its growth
+    #                        branches only (:1451, :1505); kept past bdTSG and before sowing
     nlf: float = 0.0
     nst: float = 0.0
     nveg: float = 0.0
@@ -145,8 +149,15 @@ class SimState:
 
     # --- soil N (g m-2)
     nsol: list[float] = field(default_factory=lambda: [0.0] * 10)   # mineral N per layer
+    insol: list[float] = field(default_factory=lambda: [0.0] * 10)  # NSOL at season init
+    mnorg: list[float] = field(default_factory=lambda: [0.0] * 10)  # mineralizable org. N
+    ncon: list[float] = field(default_factory=lambda: [0.0] * 10)   # g N per g soil water
+    navl: list[float] = field(default_factory=lambda: [0.0] * 10)   # plant-available N
     snavl: float = 0.0     # plant-available soil mineral N
-    isoln: float = 0.0     # profile mineral N at DAP 1
+    cnsol60: float = 0.0   # mineral N in the top 600 mm (automatic N application)
+    isoln: float = 0.0     # profile mineral N at SoilN's season init (first
+    #                        spin-up day, iCrop.vba:1616), not at sowing
+    nfa01: list[int] = field(default_factory=list)  # per N event: 1 = applied (NATiT 2)
 
     # daily N fluxes (recomputed each day)
     nfert: float = 0.0     # fertiliser N applied today
@@ -155,13 +166,20 @@ class SimState:
     snmin: float = 0.0     # N mineralised today
     sndnit: float = 0.0    # N denitrified today
 
+    cnsol: float = 0.0     # profile mineral N today, re-summed daily (:1730-1743)
+
     # cumulative N balance
-    cnsol: float = 0.0
     cnfert: float = 0.0
     cnvol: float = 0.0
     cnleach: float = 0.0
     cnmin: float = 0.0
     cndnit: float = 0.0
+
+    # pre-sowing baselines, saved when SoilN resets at DAP 1 (:1620-1624).
+    # CNFERT and CNVOL are not reset there and keep the pre-sowing amounts.
+    cnmin0: float = 0.0    # VBA name CMNIM0
+    cnleach0: float = 0.0
+    cndnit0: float = 0.0
 
     # --- weather (current day)
     tmax: float = 0.0

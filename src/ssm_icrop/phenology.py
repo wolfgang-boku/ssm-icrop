@@ -268,8 +268,9 @@ def step_phenology_wheat(state: SimState, params: WheatParams, lat: float) -> No
         state.wsfd = 1.0
         # iCrop.vba:283. This block runs after Weather on crop day 1, so snow
         # that fell that day is dropped. FTSW(1) = 0.5 is overwritten by
-        # SoilWater the same day when water > 0; with water = 0 it stays and
-        # is what SoilN's mineralisation reads (:1632).
+        # SoilWater the same day when water > 0. With water = 0 it stays; SoilN
+        # (:1632) does not run then (ManagementConfig), but the unported
+        # FixFind 4/5 read it in later seasons (:1913, :1935).
         state.snow = 0.0
         state.cbd = 0.0
         state.dap = 0

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- SoilN, the soil nitrogen balance, verified against the reference output up
+  to emergence. `nitrogen = 2` still raises until PlantN and CropLAIN are
+  ported.
 - Soil parameter extraction from the 2022 source workbook
   (`scripts/extract_soil_params.py`) and the soil file `configs/soils/danesh.yaml`.
 
@@ -16,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Scenarios reference their soil with `soil_file`, as they reference their
   crop with `crop_file`; an inline `soil` block is rejected.
+- A scenario with `nitrogen = 2` and `water = 0` is rejected: without the soil
+  water balance VBA simulates no soil layer, or divides by zero.
 
 ### Fixed
 

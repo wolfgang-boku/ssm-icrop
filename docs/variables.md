@@ -102,13 +102,13 @@ the model's own conventions.
 | `NATiT` | `nfert_timing_mode` | 1 DAP, 2 CBD, 3 DOY, 4 automatic | — | int |
 | `DAPNF(N)` | `nfert_time[]` | Timing of each top-dressing | DAP/CBD/DOY | list[float] |
 | `NFERTI(N)` | `nfert_amount[]` | N per application | gN m⁻² | list[float] |
-| `VOLFI(N)` | `nfert_volat_frac[]` | Volatilisation fraction | — | list[float] |
+| `VOLFI(N)` | `nfert_volat_frac[]` | Volatilisation, per cent of the amount (`/ 100` at `iCrop.vba:1650`) | % | list[float] |
 | `NFA01(N)` | `nfert_done[]` | "Applied already" flag | 0/1 | list[int] |
-| `ntrsh0`,`ntrsh1` | `n_stress_thresh0/1` | N-stress triggers for auto-N | — | float |
-| `nvolf0`,`nvolf1` | `n_volat_frac0/1` | Volatilisation fractions (auto-N) | — | float |
-| `bdBFRT` | `bd_basal_fert` | CBD for basal fertiliser | bd | float |
-| `bdTFRT` | `bd_top_fert` | CBD for top-dressing | bd | float |
-| `FRTWAT` | `fert_with_irrig` | Apply N only if irrigated | 0/1 | int |
+| `ntrsh0`,`ntrsh1` | `n_stress_thresh0/1` | Auto-N thresholds on `CNSOL60` (N in the top 600 mm): top-up target at DAP 1, top-dressing trigger | gN m⁻² | float |
+| `nvolf0`,`nvolf1` | `n_volat_frac0/1` | Volatilisation (auto-N), per cent (`/ 100` at `iCrop.vba:1675`, `:1681`) | % | float |
+| `bdBFRT` | `bd_basal_fert` | Start of the auto-N top-dressing window (exclusive) | bd | float |
+| `bdTFRT` | `bd_top_fert` | End of the auto-N top-dressing window (exclusive) | bd | float |
+| `FRTWAT` | `fert_with_irrig` | Root-zone water `ATSWRZ` needed to top-dress (`iCrop.vba:1678`) | mm | float |
 | `napply1` | `n_apply_amount1` | Auto-N amount | gN m⁻² | float |
 
 ## 6. Weather (current day)
@@ -391,8 +391,9 @@ the model's own conventions.
 | `SNDNIT` | `n_denitrified` | N denitrified today | gN m⁻² | float |
 | `SNAVL` | `soil_n_avail` | Plant-available soil mineral N | gN m⁻² | float |
 | `NSOL(L)` | `soil_n_layer[]` | Mineral N per layer | gN m⁻² | list[float] |
-| `ISOLN` | `initial_soil_n` | Profile mineral N at DAP 1 | gN m⁻² | float |
-| `CNFERT`,`CNVOL`,`CNLEACH`,`CNMIN`,`CNDNIT`,`CNUP`,`CNSOL` | `n_fert_cum`,`n_volat_cum`,`n_leach_cum`,`n_min_cum`,`n_denit_cum`,`n_uptake_cum`,`n_soil_cum` | Cumulative N-balance totals | gN m⁻² | float |
+| `ISOLN` | `initial_soil_n` | Profile mineral N at SoilN's season init (first spin-up day) | gN m⁻² | float |
+| `CNFERT`,`CNVOL`,`CNLEACH`,`CNMIN`,`CNDNIT`,`CNUP` | `n_fert_cum`,`n_volat_cum`,`n_leach_cum`,`n_min_cum`,`n_denit_cum`,`n_uptake_cum` | Cumulative N-balance totals | gN m⁻² | float |
+| `CNSOL` | `n_soil_total` | Profile mineral N today, re-summed daily (not cumulative) | gN m⁻² | float |
 
 ---
 

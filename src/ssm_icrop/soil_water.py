@@ -81,7 +81,7 @@ class SoilWaterParams:
 
 
 @dataclass
-class _Layers:
+class LayerLimits:
     """Per-layer limits in mm, computed from the Soil sheet at :1152-1166.
 
     Ten slots like the VBA arrays (ReDim ...(10), :59-65); slots past NLYER
@@ -96,8 +96,8 @@ class _Layers:
     drainf: list[float]
 
 
-def _layers(soil: SoilConfig) -> _Layers:
-    out = _Layers(*([0.0] * 10 for _ in range(6)))
+def layer_limits(soil: SoilConfig) -> LayerLimits:
+    out = LayerLimits(*([0.0] * 10 for _ in range(6)))
     for i, layer in enumerate(soil.active_layers):
         out.dlyer[i] = layer.depth_mm
         out.wlad[i] = layer.adry * layer.depth_mm
@@ -115,7 +115,7 @@ def _tec(params: SoilWaterParams) -> float:
     return params.tec_ref * (rue_co2 / rue_ref)
 
 
-def _initialise(state: SimState, soil: SoilConfig, layers: _Layers,
+def _initialise(state: SimState, soil: SoilConfig, layers: LayerLimits,
                 params: SoilWaterParams, management: ManagementConfig) -> None:
     """The iniSW block (iCrop.vba:1117-1184), once per season.
 
@@ -226,7 +226,7 @@ def _irrigation(state: SimState, management: ManagementConfig) -> float:
     return irgw
 
 
-def _root_growth(state: SimState, params: SoilWaterParams, layers: _Layers) -> float:
+def _root_growth(state: SimState, params: SoilWaterParams, layers: LayerLimits) -> float:
     """Today's root depth increase (iCrop.vba:1255-1261), mm.
 
     Roots grow between bdBRG and bdTRG, which every crop sets to its emergence
@@ -242,7 +242,7 @@ def _root_growth(state: SimState, params: SoilWaterParams, layers: _Layers) -> f
     return params.grtdp * state.bd
 
 
-def _roots_per_layer(state: SimState, layers: _Layers, n_layers: int) -> list[float]:
+def _roots_per_layer(state: SimState, layers: LayerLimits, n_layers: int) -> list[float]:
     """Root length in each layer, and the deepest rooted layer (:1264-1271)."""
     rlyer = [0.0] * 10
     dptop = 0.0
@@ -255,7 +255,7 @@ def _roots_per_layer(state: SimState, layers: _Layers, n_layers: int) -> list[fl
     return rlyer
 
 
-def _runoff(state: SimState, soil: SoilConfig, layers: _Layers) -> float:
+def _runoff(state: SimState, soil: SoilConfig, layers: LayerLimits) -> float:
     """Runoff by a modified curve-number method, rainfed only (iCrop.vba:1274-1297).
 
     Soltani & Sinclair (2025) cite Williams (1991) and Hoogenboom et al.
@@ -367,7 +367,7 @@ def _drought_survival(state: SimState, params: SoilWaterParams, sla: float) -> N
             state.lai = 0.0
 
 
-def _update_layers(state: SimState, layers: _Layers, rlyer: list[float],
+def _update_layers(state: SimState, layers: LayerLimits, rlyer: list[float],
                    n_layers: int, params: SoilWaterParams) -> None:
     """Uptake, evaporation and drainage per layer, then the root-zone and
     profile totals (iCrop.vba:1352-1397)."""
@@ -459,7 +459,7 @@ def step_soil_water(
     `sla` is CropLAI's specific leaf area (Crop row 12, :726), which the
     drought-survival leaf loss reads (:1346).
     """
-    layers = _layers(soil)
+    layers = layer_limits(soil)
     n_layers = soil.n_layers
 
     if state.ini_sw == 0:
@@ -480,6 +480,7 @@ def step_soil_water(
 
     state.deport += _root_growth(state, params, layers)
     rlyer = _roots_per_layer(state, layers, n_layers)
+    state.rlyer = rlyer  # a VBA global: SoilN reads it for plant-available N (:1739)
 
     state.runof = _runoff(state, soil, layers) if management.water == 2 else 0.0
     state.crain += state.rain

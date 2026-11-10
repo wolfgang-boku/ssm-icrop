@@ -1,8 +1,9 @@
 # "Taj1 Arab" exactly as configured in the 2022 source workbook's Run sheet:
 # scheduled irrigation (water=3) plus a full N balance (nitrogen=2).
 #
-# NOT RUNNABLE YET -- nitrogen=2 needs CropLAIN, PlantN and SoilN, which are
-# not ported. This file exists so the management block is transcribed once,
+# NOT RUNNABLE YET -- nitrogen=2 needs CropLAIN and PlantN, which are not
+# ported. tests/test_verification.py already runs its days up to emergence,
+# which need only SoilWater and SoilN. This file exists so the management block is transcribed once,
 # from the sheet, instead of being invented later. The runnable variants are
 # gorgan_wheat_potential.yaml and gorgan_wheat_waterlim.yaml.
 #
@@ -44,10 +45,10 @@ management:
 
   nitrogen_schedule:
     timing_basis: 3      # NATiT=3 -> DOY-based
-    # NOTE unresolved unit: the sheet header for this column reads "(%)" and the
-    # values are 2/10/10, but iCrop.vba:150 calls VOLFI a "Fraction
-    # volatilization". Transcribed verbatim rather than converted -- resolve
-    # against SoilN's actual usage when that module is ported.
+    # volatilization_fraction is in per cent, as the sheet header "(%)" says:
+    # SoilN divides it by 100 (iCrop.vba:1650), although :150 calls VOLFI a
+    # "Fraction volatilization". The reference output confirms it: 2.3 g N m-2
+    # at 2 % gives NVOL = 0.046 on DOY 348.
     events:
       - {time: 348, amount: 2.3, volatilization_fraction: 2.0}
       - {time: 42,  amount: 2.3, volatilization_fraction: 10.0}

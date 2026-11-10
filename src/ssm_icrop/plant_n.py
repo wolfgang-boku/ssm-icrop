@@ -38,5 +38,9 @@ def step_plant_n(state: SimState, params: PlantNParams) -> None:
     DMDistributionParams currently carries a static `sncs` field, which is inert
     under potential production (NST=0 makes the SGR check true either way,
     iCrop.vba:1066) but must move here once N is live.
+
+    BNF is assigned only when NUP > SNAVL (:1451) and otherwise keeps
+    yesterday's value; SoilN removes NUP - BNF from the soil (:1726), so
+    `state.bnf` must persist from day to day, not restart from 0.
     """
     raise NotImplementedError
