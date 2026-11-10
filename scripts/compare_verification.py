@@ -7,7 +7,8 @@ Gorgan, sown DOY 348 2005 (Taj1 config), scenario "Taj1-Potential"
 (water=0, nitrogen=0).
 
 This report covers "Taj1-Potential" only. tests/test_verification.py also
-verifies "Taj1-WaterLim" and the pre-sowing days of the irrigated scenarios.
+verifies "Taj1-WaterLim" and the days up to emergence of the irrigated
+scenarios.
 
 Usage:
     .venv/bin/python scripts/compare_verification.py

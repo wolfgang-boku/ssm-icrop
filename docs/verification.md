@@ -173,17 +173,21 @@ macro run, VBA globals carry over between scenarios, and the spin-up rows of
 compared as 0.
 
 **`Taj1 Arab`** (`water = 3`) and **`Taj1-Nlim`** (`water = 1`) run from
-`configs/example/gorgan_wheat_taj1.yaml`. Only the eight days before sowing are
-compared: the 16 water columns and the 12 `SoilN` columns
+`configs/example/gorgan_wheat_taj1.yaml`. Two stretches are compared: the
+eight days before sowing, and the first eight crop days (DAP 1–8), which end
+the day before emergence. Until emergence `LAI = 0` and `NUP = 0` in the
+reference output, so `PlantN` and `CropLAIN` change nothing yet. All 16 days
+are compared in the 16 water columns and the 12 `SoilN` columns
 
 `NFERT CNFERT NVOL CNVOL NLEACH CNLEACH NMIN CNMIN NDNIT CNDNIT SNAVL NSOL`
 
-with a tolerance of 1e-12; the port matches exactly (difference 0.0) once the
-soil is read as the doubles the workbook stores (`configs/soils/danesh.yaml`).
+and DAP 1–8 also in the 18 crop columns. The tolerance is 1e-12. `Taj1 Arab`
+matches exactly (difference 0.0) once the soil is read as the doubles the
+workbook stores (`configs/soils/danesh.yaml`), and `Taj1-Nlim` to within 1e-14.
 The tighter tolerance leaves room only for platform differences in `exp` and
 `log`. (`NMIN`, `NDNIT`
-and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.) From sowing
-on, both scenarios need `PlantN` and `CropLAIN`.
+and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.) From
+emergence (DAP 9) on, both scenarios need `PlantN` and `CropLAIN`.
 
 `tests/test_crop_params_extraction.py` additionally checks that the crop
 parameters read from the 2022 source workbook by `scripts/extract_crop_params.py`
@@ -275,30 +279,32 @@ irrigation.
 
 ### `SoilN` (`soil_n.py`, `iCrop.vba:1575-1766`)
 
-**Checked against the reference output on the days before sowing only
-(`Taj1 Arab`, `Taj1-Nlim`, eight days):**
+**Checked against the reference output up to emergence only (`Taj1 Arab`,
+`Taj1-Nlim`: eight days before sowing, then DAP 1–8):**
 
 | Process | VBA lines | Note |
 |---|---|---|
 | Season initialisation of the N pools | 1577-1618 | `FG = 0` in every layer |
+| Reset of `CNMIN`, `CNLEACH`, `CNDNIT` at DAP 1 | 1620-1624 | |
 | Net mineralization, both branches of the water factor | 1627-1642 | `TMP` below 35 °C |
 | DOY-based fertilizer and volatilization (`NATiT = 3`) | 1663-1670, 1688-1689 | one event, on the sowing day |
 | Downward movement and leaching | 1692-1698 | only `LDRAIN = NLYER` |
-| Layer update, concentration, plant-available N | 1730-1744 | uptake is 0: `NUP = 0` before sowing |
+| Denitrification in layer 1 | 1700-1722 | `Taj1-Nlim` only: its daily irrigation lifts `FTSW(1)` above 1 from DAP 1 |
+| Layer update, concentration, plant-available N | 1730-1744 | uptake is 0: `NUP = 0` before emergence |
 | N in the top 600 mm | 1747-1759 | layers end exactly at 600 mm |
 
 **Unit tests only, never checked against the reference output:**
 
 | Process | VBA lines | Why not covered |
 |---|---|---|
-| Reset of `CNMIN`, `CNLEACH`, `CNDNIT` at DAP 1 | 1620-1624 | needs crop days, which need `PlantN` |
-| Plant uptake per layer | 1725-1727 | same |
-| Denitrification, and layer 2 switched off under a thick layer 1 | 1701-1722 | `FTSW <= 1` in layers 1 and 2 before sowing |
+| Plant uptake per layer | 1725-1727 | `NUP > 0` from emergence on, which needs `PlantN` |
+| Denitrification in layer 2, and its switch-off under a thick layer 1 | 1703-1704, 1713 | `FTSW(2) <= 1` up to emergence; layer 1 is 150 mm |
+| Cap of the denitrified concentration at 400 mg N l⁻¹ | 1706 | |
 | DAP- and CBD-based fertilizer (`NATiT` 1, 2), and the CBD same-day bug | 1646-1662 | the scenarios use `NATiT = 3` |
 | Automatic N application (`NATiT = 4`) | 1671-1686 | same |
 | Mineralization stopping at 200 mg N l⁻¹, no movement at ≤ 1 mg N l⁻¹ | 1636, 1694 | concentrations stay between |
 | A layer straddling 600 mm | 1608-1611 | |
-| Values carried from one season into the next (`NAVL`, `SNAVL`, `NUP`, `BNF`), which drain the soil before sowing | 1726 | the reference output has one season |
+| Values carried from one season into the next (`NAVL`, `SNAVL`, `NUP`, `BNF`), which change soil N before sowing: `NUP − BNF > 0` removes N, `< 0` adds it | 1726 | the reference output has one season |
 
 The reference output does show the carry-over between *scenarios*: the
 spin-up rows of `Taj1-Nlim` print `CNUP = 18.96` from the end of `Taj1 Arab`.
@@ -331,4 +337,5 @@ Two points to resolve before relying on those scenarios:
   TTSWRZ − ATSWRZ. Because `water = 1` refills to DUL without a lower bound
   (`soil_water._auto_irrigation_amount`), the amount turns negative above DUL
   and `CIRGW` ends at −196 mm. A Python config reproduces this with
-  `irg_level: .inf`.
+  `irg_level: .inf`; on DAP 1–8 the port's `IRGW` matches the reference
+  output with it.

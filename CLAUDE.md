@@ -97,9 +97,9 @@ weather, phenology (except the ENVIRONMENTAL tail), crop_lai, dm_production,
 dm_distribution, soil_water, sowing (FixFind=0 only, including the pre-sowing
 spin-up that runs SoilWater with DAP=0).
 
-soil_n is ported and verified on the eight pre-sowing days of the two
-`nitrogen=2` scenarios only (12 soil N columns); from sowing on those scenarios
-need PlantN and CropLAIN.
+soil_n is ported and verified up to emergence only: the eight pre-sowing days
+and DAP 1–8 of the two `nitrogen=2` scenarios (12 soil N columns, plus water
+and crop columns). From emergence on those scenarios need PlantN and CropLAIN.
 
 "Verified" covers only the code paths the reference scenarios run: wheat only,
 one soil, one season, no snow, and no climate-change adjustments (`tchng`,

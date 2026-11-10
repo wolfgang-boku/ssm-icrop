@@ -2,8 +2,8 @@
 # scheduled irrigation (water=3) plus a full N balance (nitrogen=2).
 #
 # NOT RUNNABLE YET -- nitrogen=2 needs CropLAIN and PlantN, which are not
-# ported. tests/test_verification.py already runs its pre-sowing days, which
-# need only SoilWater and SoilN. This file exists so the management block is transcribed once,
+# ported. tests/test_verification.py already runs its days up to emergence,
+# which need only SoilWater and SoilN. This file exists so the management block is transcribed once,
 # from the sheet, instead of being invented later. The runnable variants are
 # gorgan_wheat_potential.yaml and gorgan_wheat_waterlim.yaml.
 #

@@ -13,9 +13,9 @@ Wheat cultivar "Tajan" (Crop sheet column D) at Gorgan, sown DOY 348 2005
 - "Taj1-WaterLim" (water=2, rainfed), from configs/example/gorgan_wheat_waterlim.yaml.
 
 The N-limited ("Taj1-Nlim") and full-model ("Taj1 Arab") scenarios in the same
-file are compared on their spin-up days only, the soil water and soil N
-columns: from sowing on they need PlantN and CropLAIN. When those are built,
-add a test class per scenario the same way, loading the matching sName slice.
+file are compared up to emergence only: their spin-up days and DAP 1-8. From
+emergence on they need PlantN and CropLAIN. When those are built, add a test
+class per scenario the same way, loading the matching sName slice.
 
 Spin-up rows (DAP=0, the days up to sowing) carry only the soil water balance.
 Their crop columns are not compared: the reference run computed all four
@@ -110,11 +110,11 @@ VBA_TO_PY = {
 # could let a small consequential error through.
 ATOL = 1e-6
 
-# The pre-sowing rows of the nitrogen=2 scenarios run only SoilWater and SoilN
-# for eight days and match the reference exactly (0.0) with the soil doubles
-# from configs/soils/. 1e-12 keeps room for platform differences in exp/log,
-# which SoilN's mineralization uses, and catches what 1e-6 would not.
-SPINUP_ATOL = 1e-12
+# Up to emergence the nitrogen=2 scenarios need neither PlantN nor CropLAIN,
+# and they match the reference to within 1e-14 (Taj1 Arab: 0.0) with the soil
+# doubles from configs/soils/. 1e-12 keeps room for platform differences in
+# exp/log, which SoilN's mineralization uses, and catches what 1e-6 would not.
+PRE_EMERGENCE_ATOL = 1e-12
 
 
 def _load_vba_reference(scenario: str) -> pd.DataFrame:
@@ -249,15 +249,20 @@ VBA_SOIL_N_TO_PY = {
     "scenario,water,irg_level",
     [("Taj1 Arab", 3, 0.5), ("Taj1-Nlim", 1, float("inf"))],  # see docs/verification.md
 )
-def test_spinup_irrigated_nitrogen_scenarios(scenario, water, irg_level):
-    """The two nitrogen=2 scenarios, before sowing.
+def test_irrigated_nitrogen_scenarios_up_to_emergence(scenario, water, irg_level):
+    """The two nitrogen=2 scenarios, from the first spin-up day to DAP 8.
 
-    Only their pre-sowing rows are comparable until PlantN and CropLAIN are
-    ported. Before sowing CBD=0, no irrigation fires and PlantN does not run,
-    so SoilWater and SoilN alone produce these rows: the soil water columns
-    and the soil N columns, including the first top-dressing on the sowing day
-    (DOY 348). The crop days are run (one of them, a PlantN-less stand-in) only
-    because _run_season needs them; they are not compared.
+    Only these rows are comparable until PlantN and CropLAIN are ported. The
+    crop emerges on DAP 9; until then LAI = 0 and PlantN takes up nothing
+    (NUP = 0, iCrop.vba:1435-1436), so the port's PlantN-less stand-in gives
+    the same rows. They cover the first top-dressing on the sowing day
+    (DOY 348), the reset of the season sums at DAP 1 (:1620-1624) and, in
+    Taj1-Nlim, its daily irrigation and the denitrification in layer 1 that
+    follows from it.
+
+    Water and soil N columns are compared on every row; crop columns from
+    DAP 1 only, because the spin-up rows of a VBA macro run show the previous
+    scenario's crop values.
     """
     config = load_scenario(REPO_ROOT / "configs" / "example" / "gorgan_wheat_taj1.yaml")
     mgmt = config.management
@@ -267,17 +272,24 @@ def test_spinup_irrigated_nitrogen_scenarios(scenario, water, irg_level):
         weather_df=load_weather(config.location.weather_file),
         params=params, lat=config.location.latitude,
         pyear=mgmt.plant_year, simdoy=mgmt.sim_doy, pdoy=mgmt.pdoy,
-        pden=mgmt.plant_density, water=water, nitrogen=2, max_days=1,
+        pden=mgmt.plant_density, water=water, nitrogen=2, max_days=8,
         soil_water=_soil_water_inputs(params, config.soil, mgmt),
     )
     py_daily = pd.DataFrame(records)
     vba_daily = _load_vba_all_days(scenario).rename(columns=VBA_SOIL_N_TO_PY)
 
-    spinup = vba_daily["DAP"] == 0
-    assert spinup.sum() == (py_daily["dap"] == 0).sum() == 8
-    assert vba_daily.loc[spinup, "nfert"].iloc[-1] == 2.3
+    vba_daily = vba_daily.iloc[: len(py_daily)]
+    assert list(py_daily["dap"]) == list(vba_daily["DAP"]) == [0] * 8 + list(range(1, 9))
+    assert vba_daily["nfert"].iloc[7] == 2.3
+    crop = vba_daily["DAP"] > 0
+    # the premise: nothing PlantN or CropLAIN would change has happened yet
+    assert (vba_daily.loc[crop, "lai"] == 0).all() and (vba_daily.loc[crop, "NUP"] == 0).all()
     for col in [*VBA_WATER_TO_PY.values(), *VBA_SOIL_N_TO_PY.values()]:
         _assert_matches(
-            py_daily.loc[spinup, col], vba_daily.loc[spinup, col], vba_daily["DAP"],
-            SPINUP_ATOL,
+            py_daily[col], vba_daily[col], vba_daily["DAP"], PRE_EMERGENCE_ATOL,
+        )
+    for col in VBA_TO_PY.values():
+        _assert_matches(
+            py_daily.loc[crop, col], vba_daily.loc[crop, col], vba_daily["DAP"],
+            PRE_EMERGENCE_ATOL,
         )
