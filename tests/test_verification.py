@@ -12,10 +12,9 @@ Wheat cultivar "Tajan" (Crop sheet column D) at Gorgan, sown DOY 348 2005
 - "Taj1-Potential" (water=0, nitrogen=0), from hand-transcribed literals;
 - "Taj1-WaterLim" (water=2, rainfed), from configs/example/gorgan_wheat_waterlim.yaml.
 
-The N-limited ("Taj1-Nlim") and full-model ("Taj1 Arab") scenarios in the same
-file are compared up to emergence only: their spin-up days and DAP 1-8. From
-emergence on they need PlantN and CropLAIN. When those are built, add a test
-class per scenario the same way, loading the matching sName slice.
+The N-limited ("Taj1-Nlim") and full-model ("Taj1 Arab") scenarios run from
+configs/example/gorgan_wheat_taj1.yaml over the whole season, and separately
+up to emergence at a tighter tolerance.
 
 Spin-up rows (DAP=0, the days up to sowing) carry only the soil water balance.
 Their crop columns are not compared: the reference run computed all four
@@ -41,6 +40,7 @@ from ssm_icrop.model import (
     run_simulation,
 )
 from ssm_icrop.phenology import WheatParams
+from ssm_icrop.plant_n import PlantNParams
 from ssm_icrop.soil_water import SoilWaterParams
 from ssm_icrop.weather import load_weather
 
@@ -77,8 +77,14 @@ TAJAN_DM_DISTRIBUTION = DMDistributionParams(
     flf1a=0.6, flf1b=0.3, wtopl=160.0, flf2=0.1,
     frtrl=0.22, gcc=1.0, pdhi=0.01638,
     wdhi1=0.0, wdhi2=600.0, wdhi3=1200.0, wdhi4=3200.0,
-    sncs=0.0063, mc=14.0,
+    mc=14.0,
     heat=1, tp2h=31.0, tch=40.0, tp1f=0.0, tbf=-5.0, rfmax=0.3,
+)
+
+# Crop rows 61-68 (iCrop.vba:1418-1425)
+TAJAN_PLANT_N = PlantNParams(
+    slng=1.5, slns=0.4, sncg=0.015, sncs1=0.0063, sncs2=0.0022,
+    gnc_min=0.016, gnc_max=0.042, mxnup=0.5,
 )
 
 # Crop rows 46-59, 24-25. WSSN, EPCOND and LTLRWC are blank (read as 0).
@@ -110,8 +116,8 @@ VBA_TO_PY = {
 # could let a small consequential error through.
 ATOL = 1e-6
 
-# Up to emergence the nitrogen=2 scenarios need neither PlantN nor CropLAIN,
-# and they match the reference to within 1e-14 (Taj1 Arab: 0.0) with the soil
+# Up to emergence (LAI = 0, NUP = 0) the nitrogen=2 scenarios match the
+# reference to within 1e-14 (Taj1 Arab: 0.0) with the soil
 # doubles from configs/soils/. 1e-12 keeps room for platform differences in
 # exp/log, which SoilN's mineralization uses, and catches what 1e-6 would not.
 PRE_EMERGENCE_ATOL = 1e-12
@@ -252,13 +258,12 @@ VBA_SOIL_N_TO_PY = {
 def test_irrigated_nitrogen_scenarios_up_to_emergence(scenario, water, irg_level):
     """The two nitrogen=2 scenarios, from the first spin-up day to DAP 8.
 
-    Only these rows are comparable until PlantN and CropLAIN are ported. The
-    crop emerges on DAP 9; until then LAI = 0 and PlantN takes up nothing
-    (NUP = 0, iCrop.vba:1435-1436), so the port's PlantN-less stand-in gives
-    the same rows. They cover the first top-dressing on the sowing day
-    (DOY 348), the reset of the season sums at DAP 1 (:1620-1624) and, in
-    Taj1-Nlim, its daily irrigation and the denitrification in layer 1 that
-    follows from it.
+    The crop emerges on DAP 9; until then LAI = 0 and PlantN takes up nothing
+    (NUP = 0, iCrop.vba:1435-1436). These rows match more closely than the
+    rest of the season and are compared at the tighter PRE_EMERGENCE_ATOL.
+    They cover the first top-dressing on the sowing day (DOY 348), the reset
+    of the season sums at DAP 1 (:1620-1624) and, in Taj1-Nlim, its daily
+    irrigation and the denitrification in layer 1 that follows from it.
 
     Water and soil N columns are compared on every row; crop columns from
     DAP 1 only, because the spin-up rows of a VBA macro run show the previous
@@ -282,7 +287,7 @@ def test_irrigated_nitrogen_scenarios_up_to_emergence(scenario, water, irg_level
     assert list(py_daily["dap"]) == list(vba_daily["DAP"]) == [0] * 8 + list(range(1, 9))
     assert vba_daily["nfert"].iloc[7] == 2.3
     crop = vba_daily["DAP"] > 0
-    # the premise: nothing PlantN or CropLAIN would change has happened yet
+    # the premise: no leaf area and no uptake yet
     assert (vba_daily.loc[crop, "lai"] == 0).all() and (vba_daily.loc[crop, "NUP"] == 0).all()
     for col in [*VBA_WATER_TO_PY.values(), *VBA_SOIL_N_TO_PY.values()]:
         _assert_matches(
@@ -293,3 +298,68 @@ def test_irrigated_nitrogen_scenarios_up_to_emergence(scenario, water, irg_level
             py_daily.loc[crop, col], vba_daily.loc[crop, col], vba_daily["DAP"],
             PRE_EMERGENCE_ATOL,
         )
+
+
+# PlantN's columns in DailyPrintOut (Sheet4 columns 56-63)
+VBA_PLANT_N_TO_PY = {
+    "NUP": "nup", "NLF": "nlf", "NST": "nst", "NVEG": "nveg", "NGRN": "ngrn",
+    "CNUP": "cnup", "CUMBNF": "cumbnf", "NSTRS": "nstrs",
+}
+
+@pytest.fixture(
+    scope="module",
+    params=[("Taj1 Arab", 3, 0.5), ("Taj1-Nlim", 1, float("inf"))],  # see docs/verification.md
+    ids=["Taj1 Arab", "Taj1-Nlim"],
+)
+def nitrogen_run(request) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """A nitrogen=2 scenario over the whole season, from its config."""
+    scenario, water, irg_level = request.param
+    config = load_scenario(REPO_ROOT / "configs" / "example" / "gorgan_wheat_taj1.yaml")
+    config.management.water, config.management.irg_level = water, irg_level
+    py_daily = run_simulation(config).daily
+    vba_daily = _load_vba_all_days(scenario).rename(
+        columns={**VBA_SOIL_N_TO_PY, **VBA_PLANT_N_TO_PY}
+    )
+    return py_daily, vba_daily
+
+
+class TestNitrogenScenariosAgainstVBA:
+    """The full model: both nitrogen=2 scenarios over the whole season.
+
+    Water and soil N columns are compared on every row, crop and plant N
+    columns from DAP 1, because the spin-up rows show the previous scenario's
+    values. The port matches the reference to about 4e-9 (DEPORT), as in the
+    rainfed scenario.
+    """
+
+    def test_same_days(self, nitrogen_run):
+        py_daily, vba_daily = nitrogen_run
+        assert len(py_daily) == len(vba_daily) == 185
+        assert list(py_daily["doy"]) == list(vba_daily["DOY"])
+        assert list(py_daily["dap"]) == list(vba_daily["DAP"])
+
+    @pytest.mark.parametrize("col", [*VBA_WATER_TO_PY.values(), *VBA_SOIL_N_TO_PY.values()])
+    def test_soil_column_matches_vba_every_day(self, nitrogen_run, col):
+        py_daily, vba_daily = nitrogen_run
+        _assert_matches(py_daily[col], vba_daily[col], vba_daily["DAP"], ATOL)
+
+    @pytest.mark.parametrize(
+        "col", [*VBA_TO_PY.values(), *VBA_PLANT_N_TO_PY.values()]
+    )
+    def test_crop_column_matches_vba(self, nitrogen_run, col):
+        py_daily, vba_daily = nitrogen_run
+        crop = vba_daily["DAP"] > 0
+        _assert_matches(
+            py_daily.loc[crop, col], vba_daily.loc[crop, col], vba_daily["DAP"], ATOL
+        )
+
+    def test_scenarios_exercise_n_limitation(self, nitrogen_run):
+        """Guard against a vacuous match: uptake, N stress and grain N occur,
+        and N limits leaf area, so the canopy differs from the potential one."""
+        _, vba_daily = nitrogen_run
+        crop = vba_daily[vba_daily["DAP"] > 0].set_index("DAP")
+        assert crop["nup"].max() > 0.1
+        assert crop["nstrs"].between(0.001, 0.9).any()
+        assert crop["ngrn"].iloc[-1] > 9.0
+        potential = _load_vba_reference("Taj1-Potential")
+        assert (potential["lai"] - crop["lai"]).abs().max() > 0.5

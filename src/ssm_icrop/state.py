@@ -32,7 +32,7 @@ class SimState:
     msnn: float = 0.0      # main stem node number
 
     mxlai: float = 0.0     # season maximum LAI
-    blslai: float = 0.0    # LAI saved at begin leaf senescence
+    blslai: float = 0.0    # LAI latched up to bdBLS (CropLAI) or in bdTLM..bdTLP (CropLAIN)
     etlai: float = 0.0     # LAI used for soil-evaporation calc
     r5antlai: float = 0.0  # LAI at anthesis (R5)
     pla1: float = 0.0      # plant leaf area, previous day (cm2 plant-1)
@@ -145,7 +145,22 @@ class SimState:
     ngrn: float = 0.0
     cnup: float = 0.0      # cumulative N uptake
     cumbnf: float = 0.0    # biological N fixation
-    nstrs: float = 1.0     # N stress factor
+    nstrs: float = 0.0     # NUP / potential NUP, output only. Assigned only by PlantN
+    #                        (:1564); before that VBA's Empty, read as 0
+    sncs: float = 0.0      # stem N concentration at senescence (g g-1): SNCS1 before
+    #                        bdBSG, SNCS2 from it on; set by PlantN, read by
+    #                        DMDistribution the next day (iCrop.vba:1433, :1066)
+    nfc: float = 0.0       # N fixation capacity per g WVEG, a running mean (:1444);
+    #                        never reset, so it carries into the next season
+    trln: float = 0.0      # translocatable leaf + stem N (g m-2), end of yesterday
+    fxlf: float = 0.0      # leaf share of TRLN, end of yesterday
+    # today's N flows into (in*) and out of (xn*) leaf, stem and grain (g m-2);
+    # CropLAIN reads INLF and XNLF the next day (iCrop.vba:817, :842)
+    inlf: float = 0.0
+    inst: float = 0.0
+    xnlf: float = 0.0
+    xnst: float = 0.0
+    ingrn: float = 0.0
 
     # --- soil N (g m-2)
     nsol: list[float] = field(default_factory=lambda: [0.0] * 10)   # mineral N per layer
@@ -223,6 +238,7 @@ class SimState:
     cbd_r5: float = 0.0    # R5 (legume)
     cbd_r7: float = 0.0    # R7 (legume)
     cbd_r8: float = 0.0    # R8 (legume)
+    cbd_bnf: float = 0.0   # begin N fixation; 999 for wheat and maize (:280, :437)
 
     # --- leaf-production window thresholds (CBD units, used by CropLAI)
     cbd_blg: float = 0.0   # begin leaf growth (= emergence)

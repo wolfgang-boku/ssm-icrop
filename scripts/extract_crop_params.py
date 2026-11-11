@@ -103,6 +103,18 @@ SOIL_WATER_ROWS = {
     "ltlrwc": (59, 1132),
 }
 
+# PlantN's own reads, in its initialisation block (iCrop.vba:1418-1425).
+PLANT_N_ROWS = {
+    "slng": (61, 1418),
+    "slns": (62, 1419),
+    "sncg": (63, 1420),
+    "sncs1": (64, 1421),
+    "sncs2": (65, 1422),
+    "gnc_min": (66, 1423),
+    "gnc_max": (67, 1424),
+    "mxnup": (68, 1425),
+}
+
 # Cardinal temperatures for the biological-day rate; same rows for every crop.
 PHENO_COMMON_ROWS = {
     "tbd": (70, 223),
@@ -146,6 +158,9 @@ PHENO_BY_CROP = {
         "bd_tlm": (96, 590),
         "bd_tlp": (97, 591),
         "bd_bls": (98, 592),
+        # Begin N fixation. Read for legumes only; wheat and maize hardcode
+        # bdBNF = 999 (iCrop.vba:280, :437) and ignore row 104.
+        "bd_bnf": (104, 600),
     },
 }
 
@@ -230,6 +245,7 @@ def extract(workbook: Path, column: str) -> dict:
         "dm_production": _read(ws, col_idx, DM_PRODUCTION_ROWS),
         "dm_distribution": _read(ws, col_idx, DM_DISTRIBUTION_ROWS),
         "soil_water": _read(ws, col_idx, SOIL_WATER_ROWS),
+        "plant_n": _read(ws, col_idx, PLANT_N_ROWS),
     }
 
 

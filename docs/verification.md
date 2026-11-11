@@ -50,10 +50,14 @@ set. In this workbook `Taj1 Arab` runs first and leaves `NLYER = 5`, so with
 `water = 0` `SoilN` would stop the VBA with a division by zero when it first
 computes the N concentration (`iCrop.vba:1598`). In a run without an earlier
 water balance `NLYER` is empty and `SoilN` simulates no layer at all. The port
-rejects the combination. Whether `water=1` makes the
-scenario water-unlimited is open until `PlantN` is ported: mineralization
-peaks at `FTSW = 0.9` and is 0 at field capacity (`iCrop.vba:1632-1633`), and
-automatic irrigation refills the root zone to exactly field capacity.
+rejects the combination. With `water=1` the scenario is free of water stress
+but not of the soil water's effect on soil N. In the reference output
+`FTSWRZ` never falls below 0.88, above every water-stress threshold of
+"Tajan" (`WSSG` 0.3, `WSSL` 0.4, `WSSD` 0.5). But the daily irrigation keeps the
+root zone at or above field capacity (`FTSWRZ > 1` on 63 days, see `IRGLVL`
+below), where mineralization falls to 0 (`iCrop.vba:1632-1633`) and layers 1
+and 2 denitrify: the season mineralizes 5.9 g N m⁻² against 12.7 in
+`Taj1 Arab`.
 
 ## How the verification workbook was built
 
@@ -175,8 +179,7 @@ compared as 0.
 **`Taj1 Arab`** (`water = 3`) and **`Taj1-Nlim`** (`water = 1`) run from
 `configs/example/gorgan_wheat_taj1.yaml`. Two stretches are compared: the
 eight days before sowing, and the first eight crop days (DAP 1–8), which end
-the day before emergence. Until emergence `LAI = 0` and `NUP = 0` in the
-reference output, so `PlantN` and `CropLAIN` change nothing yet. All 16 days
+the day before emergence; until then `LAI = 0` and `NUP = 0`. All 16 days
 are compared in the 16 water columns and the 12 `SoilN` columns
 
 `NFERT CNFERT NVOL CNVOL NLEACH CNLEACH NMIN CNMIN NDNIT CNDNIT SNAVL NSOL`
@@ -186,8 +189,21 @@ matches exactly (difference 0.0) once the soil is read as the doubles the
 workbook stores (`configs/soils/danesh.yaml`), and `Taj1-Nlim` to within 1e-14.
 The tighter tolerance leaves room only for platform differences in `exp` and
 `log`. (`NMIN`, `NDNIT`
-and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.) From
-emergence (DAP 9) on, both scenarios need `PlantN` and `CropLAIN`.
+and `NSOL` hold the VBA variables `SNMIN`, `SNDNIT` and `CNSOL`.)
+
+Over the whole season, both scenarios are compared in all 185 rows in the 16
+water and 12 soil N columns, and on DAP 1–177 in the 18 crop columns and the
+8 `PlantN` columns
+
+`NUP NLF NST NVEG NGRN CNUP CUMBNF NSTRS`
+
+with the tolerance of 1e-6; the port matches to about 4e-9 (`DEPORT`). Leaf
+area comes from `CropLAIN` here, and N limits it: `LAI` differs from
+`Taj1-Potential` by up to 1.5 (`Taj1 Arab`) and 2.2 (`Taj1-Nlim`).
+
+`CBD` differs from the reference output by up to 1.2e-10 from emergence on,
+in all four scenarios alike, including `Taj1-Potential`. It is floating-point
+rounding in phenology, not an effect of the water or N balance.
 
 `tests/test_crop_params_extraction.py` additionally checks that the crop
 parameters read from the 2022 source workbook by `scripts/extract_crop_params.py`
@@ -256,17 +272,18 @@ no cultivar uses it.
 | Stress factors `WSFL`, `WSFG`, `WSFD` and their effect on the crop | 1400-1403 | |
 | Waterlogging day count (`FLDUR`) | 1404-1407 | the kill itself is not reached |
 
-**Checked against the reference output on the days before sowing only
-(`Taj1 Arab`, `Taj1-Nlim`):** the water balance of `water = 3` and `water = 1`. Irrigation
-never fires on those days, because it needs `CBD > 0`, so this does not check
-irrigation.
+**Checked against the reference output, every day (`Taj1 Arab`, `Taj1-Nlim`):**
+
+| Process | VBA lines | Note |
+|---|---|---|
+| Automatic irrigation (`water = 1`), including the negative-amount bug | 1201-1207 | `Taj1-Nlim`: 166 events, `CIRGW` ends at −196 mm |
+| Scheduled irrigation, DAP-based (`water = 3`, `WATiT = 1`) | 1212-1220 | `Taj1 Arab`: one event, 70 mm on DAP 117 |
 
 **Unit tests only, never checked against the reference output:**
 
 | Process | VBA lines | Why not covered |
 |---|---|---|
-| Automatic irrigation (`water = 1`), including the negative-amount bug | 1201-1207 | the only scenario with it also runs `nitrogen = 2` |
-| Scheduled irrigation (`water = 3`, `WATiT` 1-4) | 1212-1246 | same; `Taj1 Arab` uses only `WATiT = 1` |
+| Scheduled irrigation with `WATiT` 2-4 | 1221-1246 | `Taj1 Arab` uses only `WATiT = 1` |
 | Runoff from layer 1 alone | 1276-1285 | needs a top layer ≥ 250 mm |
 | Soil evaporation capped by layer 1 and taken from deeper layers; none from air-dry layers | 1357-1358 | the cap is never reached in this scenario |
 | Drought survival, and its VPD bug with `vpd_type = 1` | 1342-1349 | `surviv = 0` for every cultivar in the workbook |
@@ -279,26 +296,25 @@ irrigation.
 
 ### `SoilN` (`soil_n.py`, `iCrop.vba:1575-1766`)
 
-**Checked against the reference output up to emergence only (`Taj1 Arab`,
-`Taj1-Nlim`: eight days before sowing, then DAP 1–8):**
+**Checked against the reference output, every day (`Taj1 Arab`, `Taj1-Nlim`):**
 
 | Process | VBA lines | Note |
 |---|---|---|
 | Season initialisation of the N pools | 1577-1618 | `FG = 0` in every layer |
 | Reset of `CNMIN`, `CNLEACH`, `CNDNIT` at DAP 1 | 1620-1624 | |
 | Net mineralization, both branches of the water factor | 1627-1642 | `TMP` below 35 °C |
-| DOY-based fertilizer and volatilization (`NATiT = 3`) | 1663-1670, 1688-1689 | one event, on the sowing day |
+| DOY-based fertilizer and volatilization (`NATiT = 3`) | 1663-1670, 1688-1689 | three events: the sowing day, DOY 42 and DOY 110 |
 | Downward movement and leaching | 1692-1698 | only `LDRAIN = NLYER` |
-| Denitrification in layer 1 | 1700-1722 | `Taj1-Nlim` only: its daily irrigation lifts `FTSW(1)` above 1 from DAP 1 |
-| Layer update, concentration, plant-available N | 1730-1744 | uptake is 0: `NUP = 0` before emergence |
+| Denitrification in layers 1 and 2 | 1700-1722 | layer 1 is 150 mm, so the switch-off for layer 2 is not reached |
+| Plant uptake per layer | 1725-1727 | from emergence on |
+| Layer update, concentration, plant-available N | 1730-1744 | |
 | N in the top 600 mm | 1747-1759 | layers end exactly at 600 mm |
 
 **Unit tests only, never checked against the reference output:**
 
 | Process | VBA lines | Why not covered |
 |---|---|---|
-| Plant uptake per layer | 1725-1727 | `NUP > 0` from emergence on, which needs `PlantN` |
-| Denitrification in layer 2, and its switch-off under a thick layer 1 | 1703-1704, 1713 | `FTSW(2) <= 1` up to emergence; layer 1 is 150 mm |
+| Switch-off of denitrification in layer 2 under a thick layer 1 | 1713 | layer 1 is 150 mm |
 | Cap of the denitrified concentration at 400 mg N l⁻¹ | 1706 | |
 | DAP- and CBD-based fertilizer (`NATiT` 1, 2), and the CBD same-day bug | 1646-1662 | the scenarios use `NATiT = 3` |
 | Automatic N application (`NATiT = 4`) | 1671-1686 | same |
@@ -320,6 +336,60 @@ differ from a macro run in which the previous `nitrogen = 2` scenario ends with
 `NUP ≠ BNF`: a legume, whose `BNF` that branch leaves at its last value, or a
 season stopped before `bdTSG`.
 
+### `PlantN` (`plant_n.py`, `iCrop.vba:1416-1569`)
+
+**Checked against the reference output (`Taj1 Arab`, `Taj1-Nlim`, DAP 1–177):**
+
+| Process | VBA lines | Note |
+|---|---|---|
+| Season initialisation of the N pools | 1417-1431 | |
+| `SNCS1` before `bdBSG`, `SNCS2` from it on | 1433 | |
+| No uptake before emergence and after `bdTSG` | 1435-1436 | |
+| Vegetative uptake: demand, `MXNUP` and `SNAVL` caps, waterlogging (`WSXF`), `DDMP = 0` | 1437-1450 | |
+| Split of uptake between leaf and stem, all four cases | 1455-1479 | |
+| Seed-growth uptake at `GNCmax`, `MXNUP` and `SNAVL` caps, `NUP = 0` while grain draws on reserves | 1482-1503 | waterlogging only in `Taj1-Nlim` |
+| Grain N from uptake and translocation, `GNCmin` and `GNCmax` limits | 1509-1519 | |
+| Translocation from leaf and stem to grain, split by `FXLF` | 1550-1555 | |
+| Pool update, `NSTRS`, translocatable N | 1559-1568 | |
+| `SNCS` and `NST` read by `DMDistribution` | 1066 | the condition never becomes true: `LAI > 0` throughout seed growth |
+
+**Unit tests only, never checked against the reference output:**
+
+| Process | VBA lines | Why not covered |
+|---|---|---|
+| N fixation: `WSFN`, `BNF`, `CUMBNF`, `DNF`, the `SNAVL + DNF` cap; the stale `BNF` before `bdBSG` | 1445, 1450-1453, 1490-1498, 1504-1507 | wheat has `bdBNF = 999` |
+| `NFC` as used (it is computed every vegetative day but read only by `DNF`) | 1444, 1493 | same |
+| Negative uptake set to 0 | 1446, 1487 | demand is never negative |
+| Uptake beyond grain demand, split between leaf and stem | 1521-1548 | the grain's demand always exceeds uptake |
+| `SGR = 0` and `DDMP = 0` during seed growth | 1502, 1510 | |
+| `FXLF` limited to 0 … 1 | 1567-1568 | |
+| `NFC` carried from one season into the next | 1444 | the reference output has one season |
+
+**Not tested at all:** maize and legume crops.
+
+### `CropLAIN` (`crop_lai.step_lai_n`, `iCrop.vba:796-872`)
+
+**Checked against the reference output (`Taj1 Arab`, `Taj1-Nlim`, DAP 1–177):**
+
+| Process | VBA lines | Note |
+|---|---|---|
+| Initialisation, including `SLNG = 2` on the first day | 798-814 | `XNLF = 0` that day, so the 2 has no effect |
+| Yesterday's `GLAI` capped by `INLF / SLNG` | 817 | |
+| Leaf area growth on the main stem and from `GLF` | 827-840 | |
+| `BLSLAI` latched while `bdTLM < CBD <= bdTLP` | 838 | read as `ETLAI` after `bdBSG` by `SoilWater` and, through the canopy temperature, by the next day's `DMDistribution` |
+| Senescence from leaf N, `DLAI = XNLF / (SLNG − SLNS)` | 842 | |
+| Heat damage | 862-869 | |
+
+**Unit tests only, never checked against the reference output:**
+
+| Process | VBA lines | Why not covered |
+|---|---|---|
+| Premature maturity at `LAI < 0.05` | 819-822 | during seed growth `LAI` stays above 0.18 |
+| Frost damage | 853-860 | `TMIN` never below `FRZTKIL = −5` °C |
+| `R5ANTLAI` for wheat, maize and legumes | 844-850 | nothing in the VBA reads it; `DailyPrintOut` sets it again (2007-2015) |
+| `MXLAI` | 824 | summary output only |
+| `SLNG = 2` with a nonzero `XNLF` on the first day | 812, 842 | the port starts every season with `XNLF = 0`; VBA can carry a nonzero one only from a season that ended before `bdTSG` |
+
 ## Running it
 
 ```bash
@@ -329,11 +399,11 @@ python scripts/compare_verification.py      # table: mismatches and max |diff| p
 
 ## Extending it
 
-When `PlantN` and `CropLAIN` are ported, add a test class per remaining scenario
-to `tests/test_verification.py` that loads the matching `sName` slice, following
-the `Taj1-WaterLim` class.
+The reference output covers one crop and one season. Other crops, soils,
+sowing algorithms and multi-season runs need further reference runs; add each
+as its own scenario class in `tests/test_verification.py`.
 
-Two points to resolve before relying on those scenarios:
+A point to keep in mind about the reference scenarios:
 
 - **`IRGLVL` in `Taj1-Nlim` is stored as text.** Manag cell G89 holds the
   string `'0.9'`, not the number 0.9. `IRGLVL` is an undeclared Variant
@@ -344,5 +414,5 @@ Two points to resolve before relying on those scenarios:
   TTSWRZ − ATSWRZ. Because `water = 1` refills to DUL without a lower bound
   (`soil_water._auto_irrigation_amount`), the amount turns negative above DUL
   and `CIRGW` ends at −196 mm. A Python config reproduces this with
-  `irg_level: .inf`; on DAP 1–8 the port's `IRGW` matches the reference
-  output with it.
+  `irg_level: .inf`; with it the port's `IRGW` matches the reference output
+  on every day.

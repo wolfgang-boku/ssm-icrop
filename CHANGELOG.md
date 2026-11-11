@@ -9,9 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- SoilN, the soil nitrogen balance, verified against the reference output up
-  to emergence. `nitrogen = 2` still raises until PlantN and CropLAIN are
-  ported.
+- The nitrogen balance: SoilN (soil N), PlantN (plant N uptake and
+  distribution) and CropLAIN (leaf area limited by leaf N). `nitrogen = 2`
+  scenarios now run, and both reference scenarios match the reference output
+  over the whole season.
+- Crop files carry a `plant_n` section (Crop rows 61-68) and, for legumes,
+  `bd_bnf` (row 104).
 - Soil parameter extraction from the 2022 source workbook
   (`scripts/extract_soil_params.py`) and the soil file `configs/soils/danesh.yaml`.
 - The 2026 source workbook `SSM-iCrop/SSM_iCrop_REF_2026_10_24.xlsm`, now
@@ -20,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- SNCS, the stem N concentration at senescence, is no longer a
+  `DMDistributionParams` field: PlantN sets it each day, as in the VBA.
 - Scenarios reference their soil with `soil_file`, as they reference their
   crop with `crop_file`; an inline `soil` block is rejected.
 - A scenario with `nitrogen = 2` and `water = 0` is rejected: without the soil

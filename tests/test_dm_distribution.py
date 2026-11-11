@@ -23,7 +23,6 @@ def make_params(**overrides) -> DMDistributionParams:
         wdhi2=100.0,
         wdhi3=400.0,
         wdhi4=500.0,
-        sncs=0.005,
         mc=12.5,
         heat=0,
         tp2h=33.0,
@@ -160,9 +159,9 @@ class TestGrainFillPhase:
 
     def test_sgr_zero_without_nitrogen_when_canopy_gone(self):
         """LAI=0 and NST <= WST*SNCS blocks grain filling (no N available)."""
-        params = make_params(sncs=0.005)
+        params = make_params()
         state = make_state(cbd=120.0, dhi=0.02, trldm=20.0, hi=0.1, wtop=300.0,
-                           ddmp=10.0, lai=0.0, nst=0.0, wst=1.0)
+                           ddmp=10.0, lai=0.0, nst=0.0, wst=1.0, sncs=0.005)
         step_dm_distribution(state, params, water_mode=0)
         assert state.sgr == 0.0
 

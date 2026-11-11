@@ -26,6 +26,7 @@ phenology:
   bd_tlm: 37.5
   bd_tlp: 42.0
   bd_bls: 42.0
+  bd_bnf: 12.0
 lai:
   phyl: 95.0
   placon: 1.0
@@ -84,3 +85,12 @@ soil_water:
   surviv: 0.0
   epcond: 0.1
   ltlrwc: 0.55
+plant_n:
+  slng: 2.5
+  slns: 0.8
+  sncg: 0.02
+  sncs1: 0.005
+  sncs2: 0.005
+  gnc_min: 0.007
+  gnc_max: 0.065
+  mxnup: 0.6

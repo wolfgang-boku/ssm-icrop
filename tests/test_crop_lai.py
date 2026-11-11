@@ -2,7 +2,8 @@
 
 import pytest
 
-from ssm_icrop.crop_lai import LAIParams, step_lai
+from ssm_icrop.crop_lai import LAIParams, step_lai, step_lai_n
+from ssm_icrop.plant_n import PlantNParams
 from ssm_icrop.state import SimState
 
 
@@ -190,3 +191,84 @@ class TestLAIUpdate:
         state = make_state(cbd=50.0, lai=3.0, glai=0.0, dlai=0.0, mxlai=1.0)
         step_lai(state, params, pden=250.0)
         assert state.mxlai == pytest.approx(3.0)
+
+
+# --- CropLAIN (iCrop.vba:796-872)
+
+def make_plant_n(**overrides) -> PlantNParams:
+    values = dict(slng=1.5, slns=0.4, sncg=0.015, sncs1=0.0063, sncs2=0.0022,
+                  gnc_min=0.016, gnc_max=0.042, mxnup=0.5)
+    values.update(overrides)
+    return PlantNParams(**values)
+
+
+def step_n(state: SimState, crop_type: str = "WHEAT") -> None:
+    step_lai_n(state, make_params(), make_plant_n(), pden=250.0, crop_type=crop_type)
+
+
+class TestCropLAIN:
+    def test_yesterdays_growth_capped_by_leaf_n(self):
+        """GLAI > INLF / SLNG: GLAI = INLF / SLNG, before LAI is updated (:817)."""
+        state = make_state(cbd=20.0, lai=1.0, glai=0.2, dlai=0.0, inlf=0.15)
+        step_n(state)
+        assert state.lai == pytest.approx(1.0 + 0.15 / 1.5)
+
+    def test_growth_within_leaf_n_is_kept(self):
+        state = make_state(cbd=20.0, lai=1.0, glai=0.05, dlai=0.0, inlf=0.15)
+        step_n(state)
+        assert state.lai == pytest.approx(1.05)
+
+    def test_senescence_from_leaf_n_moved_out(self):
+        """DLAI = XNLF / (SLNG - SLNS), yesterday's XNLF (:842)."""
+        state = make_state(cbd=120.0, lai=2.0, xnlf=0.22)
+        step_n(state)
+        assert state.dlai == pytest.approx(0.22 / 1.1)
+
+    def test_slng_is_2_on_the_first_day(self):
+        """iniLAI sets SLNG = 2 (:812); PlantN reads row 61 later that day."""
+        state = make_state(ini_lai=0, cbd=1.0, xnlf=0.32, inlf=0.0)
+        step_n(state)
+        assert state.dlai == pytest.approx(0.32 / (2.0 - 0.4))
+        state.xnlf = 0.32
+        step_n(state)
+        assert state.dlai == pytest.approx(0.32 / (1.5 - 0.4))
+
+    @pytest.mark.parametrize("cbd,latched", [(60.0, False), (80.0, True), (100.0, True),
+                                             (101.0, False)])
+    def test_blslai_latched_between_tlm_and_tlp(self, cbd, latched):
+        """BLSLAI = LAI while bdTLM < CBD <= bdTLP (:838)."""
+        state = make_state(cbd=cbd, lai=3.0, blslai=0.5, cbd_tsg=200.0)
+        step_n(state)
+        assert state.blslai == (3.0 if latched else 0.5)
+
+    def test_blslai_not_latched_before_blg(self):
+        """The latch sits in the ElseIf chain below CBD <= bdBLG (:827, :838)."""
+        state = make_state(cbd=7.0, cbd_tlm=5.0, lai=0.0, blslai=0.5)
+        step_n(state)
+        assert state.blslai == 0.5
+
+    @pytest.mark.parametrize("crop_type,threshold", [("WHEAT", "cbd_ant"),
+                                                     ("MAIZE", "cbd_sil"),
+                                                     ("LEGUME", "cbd_r5")])
+    def test_lai_at_anthesis(self, crop_type, threshold):
+        """R5ANTLAI follows LAI up to anthesis, silking or R5 (:844-850)."""
+        state = make_state(cbd=50.0, lai=2.0, r5antlai=0.0)
+        setattr(state, threshold, 50.0)
+        step_n(state, crop_type)
+        assert state.r5antlai == 2.0
+        state.cbd = 50.1
+        state.lai, state.glai = 2.5, 0.0
+        step_n(state, crop_type)
+        assert state.r5antlai == 2.0
+
+    def test_frost_raises_senescence(self):
+        """Frost acts on the N-driven DLAI as in CropLAI (:853-860)."""
+        state = make_state(cbd=20.0, lai=2.0, xnlf=0.0, tmin=-6.0)
+        step_n(state)
+        assert state.dlai == pytest.approx(2.0 * 0.2)
+
+    def test_premature_maturity(self):
+        """LAI < 0.05 during seed growth ends it (:819-822)."""
+        state = make_state(cbd=110.0, lai=0.06, glai=0.0, dlai=0.02)
+        step_n(state)
+        assert (state.cbd, state.matyp) == (130.0, 2)

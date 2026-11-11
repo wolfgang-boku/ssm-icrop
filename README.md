@@ -11,10 +11,11 @@ behaviour day by day, and is verified against output produced by the original
 workbook: the *reference output*, also called the golden master, which is the
 recorded output of the original program that the port has to reproduce.
 
-> **Status: work in progress.** Potential production (no water or nitrogen
-> limitation) and the soil water balance are ported and match the reference
-> output on every day of the reference season. The nitrogen balance is not yet
-> ported.
+> **Status: work in progress.** The daily model is ported: potential
+> production, the soil water balance and the nitrogen balance match the
+> reference output on every day of the reference season, in all four reference
+> scenarios. The rule-based sowing dates and the seasonal summary output are
+> not yet ported.
 
 ## The original model
 
@@ -37,14 +38,13 @@ start if you are new to it.
 | Weather | ported, verified² |
 | Phenology: wheat | ported, verified¹ |
 | Phenology: maize, grain legumes | ported, unit tests only |
-| Leaf area (without N stress) | ported, verified |
+| Leaf area, without and with N limitation | ported, verified |
 | Dry-matter production | ported, verified (daily VPD method only) |
 | Dry-matter distribution and yield formation | ported, verified |
-| Soil water balance | ported, verified for rainfed conditions; irrigation unit tests only |
+| Soil water balance | ported, verified for rainfed, auto-irrigated and DAP-scheduled irrigation; other schedules unit tests only |
 | Sowing date: fixed date | ported, verified |
 | Sowing date: rule-based algorithms | not yet ported |
-| Plant nitrogen, soil nitrogen | not yet ported |
-| Leaf area with N stress | not yet ported |
+| Plant nitrogen, soil nitrogen | ported, verified for wheat; legume N fixation unit tests only |
 | Seasonal summary output | not yet ported |
 
 ¹ Except the seasonal weather sums that appear only in the summary output.

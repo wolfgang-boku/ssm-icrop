@@ -54,7 +54,7 @@ dm_distribution_params = DMDistributionParams(
     flf1a=0.6, flf1b=0.3, wtopl=160.0, flf2=0.1,
     frtrl=0.22, gcc=1.0, pdhi=0.014,
     wdhi1=0.0, wdhi2=600.0, wdhi3=1200.0, wdhi4=3200.0,
-    sncs=0.005, mc=14.0,
+    mc=14.0,
     heat=1, tp2h=31.0, tch=40.0, tp1f=0.0, tbf=-5.0, rfmax=0.3,
 )
 

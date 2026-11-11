@@ -37,8 +37,6 @@ INERT_DIFFERENCES = {
     # Blank Crop-sheet cell -> 0.0; wheat's beta temperature response never
     # reads tp2d (see phenology._temperature_response_beta).
     "tp2d": (30.0, 0.0),
-    # SNCS belongs to PlantN and is inert while nitrogen=0 (iCrop.vba:1066).
-    "sncs": (0.0063, 0.0),
 }
 
 
@@ -122,13 +120,6 @@ def test_config_run_matches_literal_run(scenario):
         pd.testing.assert_series_equal(
             config_daily[column], literal[column], check_exact=True
         )
-
-
-def test_unported_modes_fail_loudly():
-    """nitrogen=2 must raise, not silently skip a process."""
-    taj1 = load_scenario(REPO_ROOT / "configs" / "example" / "gorgan_wheat_taj1.yaml")
-    with pytest.raises(NotImplementedError, match="nitrogen=2"):
-        run_simulation(taj1)
 
 
 def test_location_climate_adjustments_reach_every_day():

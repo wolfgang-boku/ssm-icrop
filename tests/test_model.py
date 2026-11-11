@@ -50,7 +50,7 @@ def make_fast_dm_distribution_params() -> DMDistributionParams:
     return DMDistributionParams(
         flf1a=0.6, flf1b=0.3, wtopl=160.0, flf2=0.1, frtrl=0.2, gcc=1.3,
         pdhi=0.02, wdhi1=0.0, wdhi2=50.0, wdhi3=1000.0, wdhi4=2000.0,
-        sncs=0.005, heat=0,
+        heat=0,
     )
 
 
