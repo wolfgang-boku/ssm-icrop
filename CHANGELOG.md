@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ported.
 - Soil parameter extraction from the 2022 source workbook
   (`scripts/extract_soil_params.py`) and the soil file `configs/soils/danesh.yaml`.
+- The 2026 source workbook `SSM-iCrop/SSM_iCrop_REF_2026_10_24.xlsm`, now
+  published on the SSM crop models site, and its differences from the 2022
+  version in `docs/model_versions.md`. The port still targets 2022.
 
 ### Changed
 
