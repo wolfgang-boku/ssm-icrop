@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ssm-icrop"
-version = "0.1.0"
+version = "0.2.0"
 description = "Python port of the SSM-iCrop crop simulation model (wheat, maize, grain legumes)"
 readme = "README.md"
 license = "MIT"
