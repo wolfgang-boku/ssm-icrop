@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-11
+
 ### Added
 
 - The nitrogen balance: SoilN (soil N), PlantN (plant N uptake and
@@ -66,5 +68,6 @@ First public release of the Python port of SSM-iCrop 2022-05-29.
 - Seasonal summary output, including the seasonal weather sums of the
   phenology section.
 
-[Unreleased]: https://github.com/wolfgang-boku/ssm-icrop/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/wolfgang-boku/ssm-icrop/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/wolfgang-boku/ssm-icrop/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/wolfgang-boku/ssm-icrop/releases/tag/v0.1.0

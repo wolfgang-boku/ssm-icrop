@@ -10,8 +10,8 @@ authors:
     given-names: Wolfgang
     orcid: "https://orcid.org/0000-0003-2202-7979"
     website: "https://fuchs-modellierung.at"
-version: 0.1.0
-date-released: 2026-11-05
+version: 0.2.0
+date-released: 2026-11-11
 repository-code: "https://github.com/wolfgang-boku/ssm-icrop"
 doi: 10.5281/zenodo.23983023
 license: MIT
