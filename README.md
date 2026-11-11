@@ -122,7 +122,7 @@ docs/               verification method, variable reference, model version notes
 scripts/            parameter extraction, verification report, plotting
 tests/              unit tests and the verification against the reference output
 iCrop.vba           VBA source of the original model, for reference
-SSM-iCrop/          2022 source workbook and its verification workbook
+SSM-iCrop/          2022 source workbook, its verification workbook, 2026 source workbook
 ```
 
 ## How the port is built

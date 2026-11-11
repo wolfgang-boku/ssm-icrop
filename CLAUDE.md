@@ -143,7 +143,8 @@ Use these terms exactly; `docs/verification.md` defines them in full.
   back-to-back testing. Not *validation* (crop modellers: *evaluation*), which
   means checking a model against field observations and is not done here.
 - **Source workbook**, always with its year: the **2022 source workbook**
-  `SSM-iCrop/SSM_iCrop__2022_05_29.xlsm` is what the port targets.
+  `SSM-iCrop/SSM_iCrop__2022_05_29.xlsm` is what the port targets; the
+  **2026 source workbook** `SSM-iCrop/SSM_iCrop_REF_2026_10_24.xlsm` is kept for later.
 - **Verification workbook**: `SSM-iCrop/SSM_iCrop__2022_05_29_verification.xlsm`,
   a copy of the 2022 source workbook with output patch and added scenarios.
 - **Reference output** (golden master): `data/verification/2022-05-29/wheat_gorgan_reference_output.csv`,
