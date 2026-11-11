@@ -1,6 +1,6 @@
 ---
 name: port-section
-description: Port one GoSub section of iCrop.vba to a Python module in src/ssm_icrop/, following this project's established porting workflow. Use when implementing or completing SoilWater, SoilN, PlantN, CropLAIN, FindSimSowDate algorithms 1-5, or SummaryPrintOut.
+description: Port one open section of iCrop.vba to src/ssm_icrop/ following this project's porting workflow. Use when implementing FindSimSowDate algorithms 1-5, the ENVIRONMENTAL block of PhenologyBD, or the DailyPrintOut/SummaryPrintOut writers.
 ---
 
 # Porting a VBA section
@@ -8,6 +8,9 @@ description: Port one GoSub section of iCrop.vba to a Python module in src/ssm_i
 Follow this order. It is what produced the modules that already match real VBA
 output exactly, and the steps are ordered so that mistakes surface early and
 cheaply.
+
+Port one section per session and commit it before starting the next one in a
+new session. This keeps the context, and with it the cost, small.
 
 ## 1. Read the VBA first, completely
 
@@ -86,6 +89,11 @@ Units are a known trap: `DLYER` and `DEPORT` are **mm**.
    water-limited, N-limited and full-model scenarios waiting for their modules —
    load the slice by `sName`. This is the only step that proves correctness;
    unit tests only prove self-consistency.
+   The reference output holds daily output only. The ENVIRONMENTAL block and
+   SummaryPrintOut appear only in the seasonal summary, so they first need a
+   summary reference from a run of the verification workbook in Excel. If
+   there is none, stop and ask for it; never build a reference from the
+   Python port itself.
 4. **Coverage**: a matching column proves only the code paths the scenario
    runs. Trace which statements of the module the reference scenarios execute
    (e.g. with `sys.settrace`), and record in `docs/verification.md`, per process
@@ -106,3 +114,4 @@ Message body states: which VBA lines were ported, which VBA bugs were replicated
 and where, what was verified against real VBA output, what was NOT (unit tests
 only), and what is still missing.
 Update the status table in this file and the "Port Status" section in `CLAUDE.md`.
+Remove the finished section from this skill's `description`.
