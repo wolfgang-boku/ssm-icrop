@@ -146,6 +146,10 @@ Use these terms exactly; `docs/verification.md` defines them in full.
   a copy of the 2022 source workbook with output patch and added scenarios.
 - **Reference output** (golden master): `data/verification/2022-05-29/wheat_gorgan_reference_output.csv`,
   the daily output of one run of the verification workbook (the reference run).
+- **Reference engine**: the application that ran the macro. Microsoft Excel is
+  the reference engine; LibreOffice (`scripts/run_reference_libreoffice.py`) is
+  a substitute, verified against Excel only on the code paths the reference
+  scenarios run.
 - **Unit test**: tests one section with hand-written inputs; shows self-consistency,
   not agreement with the VBA.
 
@@ -162,6 +166,12 @@ Use these terms exactly; `docs/verification.md` defines them in full.
   NLYER=5 with six filled layer rows, and VBA simulates five.
 - Blank Crop-sheet cells are read as 0 by VBA. Don't substitute a plausible default.
 - Run the `vba-fidelity-auditor` agent on a module before trusting it.
+- A reference output made in LibreOffice is verified against VBA only on code
+  paths an Excel reference scenario has already run. Whenever a new or changed
+  scenario runs any other path and has no Excel reference run, say so
+  explicitly to the maintainer, in the pull request, and in the table
+  "Reference outputs and their engine" of `docs/verification.md`: it counts as
+  verified only after a run in Excel reproduces it.
 
 ## Commands
 
@@ -188,6 +198,14 @@ python scripts/extract_crop_params.py --list                 # cultivars + colum
 python scripts/extract_crop_params.py --column D -o configs/crops/wheat.yaml
 python scripts/extract_soil_params.py --list                  # soils + SoilRowNo
 python scripts/extract_soil_params.py --row 24 -o configs/soils/danesh.yaml
+```
+
+### Reference run without Excel (headless LibreOffice)
+```bash
+# system Python with python3-uno, not .venv; see docs/verification.md first
+/usr/bin/python3 scripts/run_reference_libreoffice.py --override "Manag!G89=1e300" \
+    -o /tmp/dailyo_libreoffice.csv \
+    --compare data/verification/2022-05-29/wheat_gorgan_reference_output.csv
 ```
 
 ### Run a scenario from config

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Reference runs without Microsoft Excel: `scripts/run_reference_libreoffice.py`
+  runs the workbook's macro in headless LibreOffice and exports `DailyO`.
+  On the four reference scenarios it reproduces the Excel reference output to
+  within 2.3e-13. `docs/verification.md` records what this was checked
+  against and where the check ends; Excel stays the reference engine.
+
 ## [0.2.0] - 2026-11-11
 
 ### Added

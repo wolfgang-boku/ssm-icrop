@@ -18,6 +18,7 @@ They follow the AIAA guide for verification and validation of simulations
 | **Source workbook** | The published workbook of one model version, always named with its year. The **2022 source workbook**, `SSM-iCrop/SSM_iCrop__2022_05_29.xlsm` (SSM-iCrop 2022-05-29), is the version this port targets: `iCrop.vba` and every crop parameter come from it, and it is never edited. [model_versions.md](model_versions.md) describes the model versions, including the **2026 source workbook** `SSM-iCrop/SSM_iCrop_REF_2026_10_24.xlsm`. |
 | **Verification workbook** | `SSM-iCrop/SSM_iCrop__2022_05_29_verification.xlsm`, a copy of the 2022 source workbook with an output patch and three added scenarios (see below). Its model calculations are unchanged. |
 | **Reference run** | One macro run of the verification workbook. |
+| **Reference engine** | The application that executed the macro. **Microsoft Excel** is the reference engine: the VBA model was written for it, and the reference output comes from a run in it. **LibreOffice** is a substitute engine, verified against Excel only on the code paths the reference scenarios run (see [Reference runs in LibreOffice](#reference-runs-in-libreoffice)). Every reference output records its engine. |
 | **Reference output** | The daily output of the reference run, `data/verification/2022-05-29/wheat_gorgan_reference_output.csv`, one directory per model version. It is the *golden master*: the recorded output of the original program that the port must reproduce. |
 | **Reference scenarios** | The four scenarios of the reference run (table below). |
 | **Unit test** | A test of one function or section in isolation, with inputs written by hand. It shows that the code does what its author read in the VBA, not that the reading was right. Only a comparison with the reference output can show that, and only for the code paths the reference scenarios run. |
@@ -25,7 +26,7 @@ They follow the AIAA guide for verification and validation of simulations
 ## Reference output
 
 `data/verification/2022-05-29/wheat_gorgan_reference_output.csv` is the `DailyO` sheet of
-the verification workbook after the reference run: 63
+the verification workbook after the reference run in Microsoft Excel: 63
 columns in `DailyPrintOut` order (`iCrop.vba:2003-2098`), one row per simulated
 day, four scenarios distinguished by the `sName` column.
 
@@ -149,6 +150,153 @@ pd.DataFrame(body, columns=header).to_csv(
     "data/verification/2022-05-29/wheat_gorgan_reference_output.csv", index=False
 )
 ```
+
+## Reference runs in LibreOffice
+
+The macro also runs in LibreOffice Basic, headless, through
+`scripts/run_reference_libreoffice.py`. This makes reference runs possible
+without a Microsoft Excel licence. LibreOffice is a substitute for Excel, not
+an equal: what it was checked against, and where that check ends, is set out
+below.
+
+### Running it
+
+The script needs LibreOffice with its Python UNO bridge (Debian/Ubuntu:
+`libreoffice-calc`, `python3-uno`) and runs under the system Python, not
+`.venv`. The weather workbooks (`SSM-iCrop/Weather/*.xls`, not tracked) must be
+present locally.
+
+```bash
+/usr/bin/python3 scripts/run_reference_libreoffice.py \
+    --override "Manag!G89=1e300" \
+    -o /tmp/dailyo_libreoffice.csv \
+    --compare data/verification/2022-05-29/wheat_gorgan_reference_output.csv
+```
+
+The script copies the workbook and the weather workbooks to a temporary
+directory, points the Location sheet at the copies, runs `iCrops`, and writes
+the `DailyO` rows in the format of the openpyxl export above. Nothing is
+saved: the workbook in the repository is never modified. `--compare` prints,
+per scenario, the largest difference from a reference CSV in each column, and
+exits with status 1 when columns, scenarios, row counts or identifiers differ,
+or when a value differs by more than both bounds: `--tolerance` (absolute,
+default 1e-12) and `--rel-tolerance` times the value's magnitude (default
+1e-14, about 45 units in the last place). The relative bound is there because
+LibreOffice's rounding noise grows with the value: 2.3e-13 is one unit in the
+last place at 1400, and 1.8e-12 at 8192. Both defaults are far below the 1e-6
+of the season-long checks in `tests/test_verification.py`: the two engines run
+the same macro, and a larger difference means LibreOffice computes something
+differently. `--timeout` (default 600 s) stops a macro that
+does not end, for example one that reads past the last weather row.
+
+### What the script changes before the run
+
+LibreOffice Basic differs from VBA in three places this macro reaches. The
+script adapts these in its in-memory copy and changes no model calculation:
+
+1. **`Pi` is renamed to `PiV`** (19 occurrences). In LibreOffice Basic `Pi` is
+   a read-only built-in constant, and the macro's own assignment
+   `Pi = 3.141592654` (`iCrop.vba:339`, `:462`, `:622`) stops it with error
+   382. The renamed variable keeps the macro's value 3.141592654, not the
+   built-in one.
+2. **`wb.Close False` is disabled** (`iCrop.vba:100`). After it, LibreOffice
+   cannot reopen the same weather workbook for the next scenario:
+   `wb.Worksheets("Sheet1")` fails. The weather workbook is opened read-only
+   and only read, so leaving it open changes no value.
+3. **Numbers stored as text need an explicit `--override`.** VBA ranks every
+   number below every string when it compares a number with a string read
+   into an undeclared Variant. LibreOffice converts the string and compares
+   numerically. The only such cell in the verification workbook is Manag!G89,
+   `IRGLVL` of `Taj1-Nlim` (see [Extending it](#extending-it)), where VBA's
+   `FTSWRZ <= IRGLVL` is always true. `--override "Manag!G89=1e300"` gives the
+   same result in LibreOffice. Without the override, LibreOffice irrigates
+   `Taj1-Nlim` on 19 days instead of 166. Because VBA's result depends on
+   the comparison operator, the script cannot emulate this in general: it
+   refuses to run while any cell of a sheet the macro reads holds a number
+   as text that no `--override` covers. Those sheets are taken from the macro
+   source, every `ThisWorkbook.Worksheets("…")` it contains (Run, Location,
+   Manag, Soil and Crop for `iCrop.vba`), plus the first sheet, from which the
+   macro reads the scenario block by position (`iCrop.vba:37`, `:39`). The sheets it addresses by code name
+   (`Sheet4` and so on) it only writes to. The script also refuses numbers
+   stored as text anywhere in Sheet1 of a weather workbook, which the macro
+   reads the same way (`iCrop.vba:183-196`); `Gorgan.xls`, `Tabriz.xls` and
+   `isfahan_9295.xls` have none. Such a cell cannot be overridden: correct
+   the weather workbook instead. Text counts as a number with `.` or `,` as
+   decimal separator, also grouped in thousands (`1,000.5`), with an `E` or
+   `D` exponent, or as a hex or octal literal (`&H1F`), since LibreOffice may
+   convert such text depending on its locale (not tested). Percentages,
+   dates, times and space-grouped numbers (`90%`, `12:00`, `1 000`) are not
+   flagged; input sheets should not hold them as text.
+
+`tests/test_run_reference_libreoffice.py` checks that applying points 1 and 2
+to `iCrop.vba` changes no other line, and that Manag!G89 is the only number
+stored as text in the verification workbook.
+
+### What it was checked against
+
+On 2026-11-26 the verification workbook ran in LibreOffice 24.2.7.2 (Linux)
+with the override above. The `DailyO` output was compared with the Excel
+reference output, every row and every column of all four reference scenarios:
+
+| `sName` | Rows (both) | Numeric columns identical | Largest difference |
+|---|---|---|---|
+| `Taj1 Arab` | 185 | 30 of 58 | 2.3e-13 (`WTOP`, `WGRN`) |
+| `Taj1-Potential` | 185 | 39 of 58 | 2.3e-13 (`WGRN`) |
+| `Taj1-WaterLim` | 181 | 42 of 58 | 8.5e-14 (`CRAIN`) |
+| `Taj1-Nlim` | 185 | 39 of 58 | 8.5e-14 (`CRAIN`) |
+
+The identifier columns are identical. In addition, `tests/test_verification.py`
+was run with the LibreOffice output as its reference: all 169 tests pass,
+including those with the tolerance of 1e-12.
+
+The remaining differences come from LibreOffice Basic's addition. It snaps a
+sum that lies within a few units in the last place of a whole number to that
+whole number (`178.90000000000003 + 0.1` gives 179, IEEE double arithmetic
+gives 179.00000000000003, as Excel and the port do). Subtraction,
+multiplication, division and `Exp` gave the IEEE result in the few cases
+tried.
+LibreOffice also reads numeric literals in the source to about 15 significant
+digits; `iCrop.vba` has no longer literal outside comments.
+
+### Where the check ends
+
+The comparison shows that LibreOffice runs this macro like Excel **on the code
+paths the four reference scenarios execute**, the same limit as for the port
+([What the reference output covers](#what-the-reference-output-covers-and-what-it-does-not)).
+On any other code path LibreOffice output is not verified against Excel. A
+scenario that runs such a path (another crop, `FixFind` 1–5, `NATiT` 1, 2 or
+4, `WATiT` 2–4, snow, `tchng`/`pchng`, several seasons, drought survival, ...)
+may meet a difference not yet seen, for example:
+
+- other built-in names the macro assigns to, or other comparisons of numbers
+  with text;
+- functions whose LibreOffice implementation was not compared with Excel's
+  here, such as `Int`, `Round`, `Log` or type conversions of undeclared
+  Variants;
+- the snapping above flipping a threshold comparison (`>=`, `<`) and sending
+  the run down another branch: a difference that is no longer small;
+- run-time errors (division by zero, overflow), which VBA raises and which
+  LibreOffice may handle differently.
+
+Rules for reference outputs, therefore:
+
+- The committed reference output of each model version stays the Excel one.
+  LibreOffice output does not replace it.
+- A reference output made in LibreOffice is recorded as such in
+  [Reference outputs and their engine](#reference-outputs-and-their-engine),
+  together with the LibreOffice version.
+- A LibreOffice reference counts as verified against VBA only for the code
+  paths an Excel reference scenario has already run. For every other path it
+  stays a **LibreOffice-only reference** until a run in Excel reproduces it;
+  the table records which paths those are.
+- Before a scenario that runs a new code path is made in LibreOffice only,
+  this is stated in its pull request.
+
+### Reference outputs and their engine
+
+| File | Engine | Scenarios | Code paths not confirmed in Excel |
+|---|---|---|---|
+| `data/verification/2022-05-29/wheat_gorgan_reference_output.csv` | Microsoft Excel | the four reference scenarios | none |
 
 ## What is verified
 
@@ -401,7 +549,11 @@ python scripts/compare_verification.py      # table: mismatches and max |diff| p
 
 The reference output covers one crop and one season. Other crops, soils,
 sowing algorithms and multi-season runs need further reference runs; add each
-as its own scenario class in `tests/test_verification.py`.
+as its own scenario class in `tests/test_verification.py`. A reference run
+in LibreOffice instead of Excel is subject to the rules in
+[Where the check ends](#where-the-check-ends): record its engine, and name
+the code paths no Excel run has confirmed yet. New scenarios should hold no
+numbers as text; the LibreOffice script refuses them.
 
 A point to keep in mind about the reference scenarios:
 
@@ -415,4 +567,5 @@ A point to keep in mind about the reference scenarios:
   (`soil_water._auto_irrigation_amount`), the amount turns negative above DUL
   and `CIRGW` ends at −196 mm. A Python config reproduces this with
   `irg_level: .inf`; with it the port's `IRGW` matches the reference output
-  on every day.
+  on every day. A LibreOffice run needs `--override "Manag!G89=1e300"` for
+  the same result ([Reference runs in LibreOffice](#reference-runs-in-libreoffice)).
