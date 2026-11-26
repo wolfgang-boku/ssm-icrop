@@ -57,6 +57,11 @@ Do not commit failing lint or tests without telling the user and getting an
 explicit go-ahead. If the diff touches `src/ssm_icrop/`, offer to run the
 `vba-fidelity-auditor` agent before committing.
 
+If the diff changes code in any language, new files included, it must have
+been through `/code-review` since its last edit ("Code review" in
+CLAUDE.md). If it has not, run it now, before committing, and tell the user
+which findings were fixed and which were not, and why.
+
 The repository is public: check the diff and the message for content that
 belongs in `CLAUDE.local.md` instead (see "Public repository" in CLAUDE.md).
 

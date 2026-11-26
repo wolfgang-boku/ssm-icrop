@@ -20,6 +20,20 @@ it checks that the change belongs on the current branch and says when a branch
 is ready for a pull request. `.githooks/` refuses commits on `main` and
 malformed messages; CI repeats the message check on pull requests.
 
+### Code review
+Every change to code goes through `/code-review` before it is committed:
+new files and edits alike, in every language (Python, VBA, shell and hook
+scripts, CI workflows, scripts inside skills). Changes to documentation only
+are exempt. Code that produces correct results must still be clean code.
+- Level `high` for new files and substantial changes; `medium` or `low` is
+  enough for a small follow-up.
+- Fix every finding, or state why it is not fixed.
+- Fixes are code changes too: review them again, until a round reports no
+  finding of severity "important".
+- New files and larger restructurings also go through `/simplify`, which
+  checks reuse, simplicity and efficiency rather than correctness. Its
+  changes are reviewed with `/code-review` as well.
+
 ## Project Goal
 Port the SSM-iCrop crop simulation model from VBA to Python, faithfully, and verify
 the port against the reference output of the original workbook.
